@@ -1,0 +1,60 @@
+.fiveprayer-times-element {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    padding: 15px;
+    font-family: Arial, sans-serif;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.fiveprayer-times-element .prayer-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.fiveprayer-times-element .prayer-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.fiveprayer-times-element .prayer-time {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.fiveprayer-times-element .iqamah-time {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .fiveprayer-times-element {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .fiveprayer-times-element .prayer-item {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 8px;
+    }
+    
+    .fiveprayer-times-element .prayer-name,
+    .fiveprayer-times-element .prayer-time,
+    .fiveprayer-times-element .iqamah-time {
+        flex: 1;
+    }
+}

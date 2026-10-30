@@ -1,0 +1,20 @@
+.fiveprayer-times-element {
+    {% if design.prayer_times_styling.background_color.normal %}
+        background-color: {{ design.prayer_times_styling.background_color.normal }};
+    {% endif %}
+    {% if design.prayer_times_styling.border_radius.value %}
+        border-radius: {{ design.prayer_times_styling.border_radius.value }};
+    {% endif %}
+}
+
+.fiveprayer-times-element .prayer-time {
+    {% if design.prayer_times_styling.time_color.normal %}
+        color: {{ design.prayer_times_styling.time_color.normal }};
+    {% endif %}
+}
+
+.fiveprayer-times-element .prayer-name {
+    {% if design.prayer_times_styling.prayer_name_color.normal %}
+        color: {{ design.prayer_times_styling.prayer_name_color.normal }};
+    {% endif %}
+}

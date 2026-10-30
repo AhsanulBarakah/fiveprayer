@@ -1,0 +1,43 @@
+# .distignore — paths that are NOT part of the released plugin package.
+#
+# The shipped ZIP is built from the "files" field in package.json and contains
+# only: build-admin/ build-blocks/ client-sdk/ php/ vendor/ languages/
+# Fiveprayer.php index.php README.md changelog.txt LICENSE.txt
+#
+# Keep this in sync with .pcpignore so Plugin Check and the release build agree
+# on what "production" means.
+
+# Source, docs and dev tooling
+src/
+blocks/
+docs/
+utils/
+tests/
+.freebuff/
+.kilo/
+
+# Build and editor configuration
+.babelrc
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+webpack.config.js
+removeEmptyTypesPlugin.js
+
+# Package manager manifests and lock files
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+composer.json
+composer.lock
+
+# VCS metadata and local check configuration
+.gitattributes
+.gitignore
+.pcpignore
+.distignore
+.github/
+.githooks/
+
+# Local release artifacts
+*.zip

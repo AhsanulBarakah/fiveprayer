@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  PHPUnit runs against an installed WordPress, the same way tests/php/*.php do:
+  the plugin must already be in wp-content/plugins/fiveprayer and activated, so
+  the tests exercise the real hooks, the real REST server and the real database
+  instead of a stub. The CI job installs WordPress first and exports
+  FIVEPRAYER_WP_DIR; see .github/workflows/tests.yml.
+
+  Locally:
+      FIVEPRAYER_WP_DIR=/tmp/wp vendor/bin/phpunit
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/phpunit/bootstrap.php"
+	colors="true"
+	cacheDirectory=".phpunit.cache"
+	beStrictAboutOutputDuringTests="true"
+	failOnRisky="true"
+	failOnWarning="true"
+>
+	<testsuites>
+		<testsuite name="fiveprayer">
+			<directory>tests/phpunit</directory>
+			<exclude>tests/phpunit/bootstrap.php</exclude>
+		</testsuite>
+	</testsuites>
+</phpunit>

@@ -1,0 +1,32 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": "> 0.25%, not dead"
+      }
+    ],
+    [
+      "@babel/preset-react",
+      {
+        // Automatic runtime: JSX resolves React from the module graph instead of
+        // the page's global `React`. The admin bundle ships React 19 while
+        // WordPress still exposes React 18 as `window.React`.
+        "runtime": "automatic"
+      }
+    ],
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    "./removeEmptyTypesPlugin.js",
+    "@babel/plugin-transform-runtime"
+  ],
+  "env": {
+    "production": {
+      "plugins": [
+        "babel-plugin-transform-react-remove-prop-types",
+        "@babel/plugin-transform-react-constant-elements"
+      ]
+    }
+  }
+}

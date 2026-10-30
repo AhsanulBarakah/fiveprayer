@@ -1,0 +1,280 @@
+name: Tests
+
+# checks.yml runs the suites once on the configuration we ship. This spreads
+# them over the PHP and Node versions the plugin claims to support, and adds
+# the two static gates that need no database: PHPStan and phpcs.
+#
+# The matrix is deliberately small where a version cannot work: vitest 5
+# declares Node `^22.12.0 || ^24.0.0 || >=26.0.0`, so Node 20 would fail before
+# running a single test, and PHPUnit 10 needs PHP 8.1+.
+on:
+  push:
+    branches:
+      - main
+      - fiveprayer-v3-release
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-analysis:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Analyse
+        run: composer analyse
+
+  code-standards:
+    name: Code standards (phpcs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: phpcs
+        run: composer lint:php
+
+  unit-js:
+    name: JS unit tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: npm run test:unit
+
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+    # The suites assert against the live REST server and the real capability
+    # system, so they need an installed WordPress and its database.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fiveprayer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      FIVEPRAYER_DB_NAME: fiveprayer_test
+      FIVEPRAYER_DB_USER: root
+      FIVEPRAYER_DB_PASSWORD: root
+      FIVEPRAYER_DB_HOST: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, mbstring, curl, dom, fileinfo, intl, json, openssl, simplexml, xml, zip
+          coverage: none
+          tools: composer
+
+      - name: Cache the WordPress tarball
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/wp-cache
+          key: wp-tarball-${{ runner.os }}-6.7
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Same installer the plain suites use, stopping once WordPress is
+      # installed and the plugin activated — PHPUnit supplies the assertions.
+      - name: Install WordPress and the plugin
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+          FIVEPRAYER_WP_CACHE: ${{ runner.temp }}/wp-cache
+          FIVEPRAYER_SKIP_SUITES: '1'
+        run: bash tools/php-suite.sh
+
+      - name: PHPUnit
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: vendor/bin/phpunit
+
+      # Keep the failing assertions in the run summary instead of the full log.
+      - name: Failing tests
+        if: failure()
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set +e
+          vendor/bin/phpunit 2>&1 | grep -E '^(There w|[0-9]+\) |FAILURES|ERRORS)' | sed 's/^/::error::/'
+          exit 0
+
+      - name: WordPress diagnostics
+        if: failure()
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          WP_DIR="$FIVEPRAYER_WP_DIR"
+          if [ -f "$WP_DIR/wp-content/debug.log" ]; then
+            echo '--- wp-content/debug.log ---'
+            tail -n 60 "$WP_DIR/wp-content/debug.log"
+          fi
+
+  # The only job that drives a browser, and the only one that can catch a
+  # broken screen: the PHP and unit suites never load the admin bundle.
+  # WordPress comes from wp-env (.wp-env.json), which mounts this working copy
+  # as a plugin and activates it.
+  #
+  # Two core versions, because the plugin declares "Requires at least: 6.7" and
+  # a screen that only breaks on the oldest supported release is invisible until
+  # a user reports it. Deliberately not sharded: three specs at one worker split
+  # across shards still pay the full wp-env start, build and Chromium install in
+  # every job, which makes the wall clock longer, not shorter. Add
+  # `--shard=${{ matrix.shard }}/N` once there are enough specs to fill a shard.
+  e2e:
+    name: E2E (WordPress ${{ matrix.core }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - core: '6.7'
+            wp_env_core: 'WordPress/WordPress#6.7'
+            # `wp core version` prints "6.7" for a bare release and "6.7.2" for a
+            # point release, so the minor segment must end the string too.
+            expect: '^6\.7(\.([0-9]+))?$'
+          - core: latest
+            # Empty on purpose: wp-env treats a falsy WP_ENV_CORE as unset, so
+            # the job uses the .wp-env.json value (`"core": null` = latest).
+            wp_env_core: ''
+            # Any released core; the point is that a version is installed and
+            # reported, not that it equals a number we would have to bump.
+            expect: '^[0-9]+\.[0-9]+'
+    env:
+      WP_ENV_CORE: ${{ matrix.wp_env_core }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # vendor/ is gitignored, and wp-env mounts this directory as the plugin:
+      # without it the autoloader is missing and activation fatals.
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # build-admin/ is gitignored too — the admin screens are empty without it.
+      - name: Build
+        run: npm run build
+
+      - name: Start WordPress
+        run: npx wp-env start
+
+      # wp-env downloads core without printing its version, so a pinned
+      # WP_ENV_CORE it quietly ignored would leave both matrix jobs testing the
+      # same WordPress and both still green. Read the version back instead.
+      - name: Check the WordPress version
+        run: |
+          set -euo pipefail
+          VERSION=$(npx wp-env run cli wp core version 2>/dev/null \
+            | tr -d '\r' | grep -E '^[0-9]' | head -1)
+          echo "WordPress ${VERSION} — expected a match for ${{ matrix.expect }}"
+          if ! printf '%s' "$VERSION" | grep -qE "${{ matrix.expect }}"; then
+            echo "::error::Expected WordPress matching ${{ matrix.expect }}, got '${VERSION}'"
+            exit 1
+          fi
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The shortcode spec needs a page that carries the shortcode; creating it
+      # here keeps the spec honest about what it renders.
+      - name: Create a page with [Fp_Single_CurrentTime]
+        run: |
+          set -euo pipefail
+          ID=$(npx wp-env run cli wp post create --post_type=page --post_status=publish \
+            --post_title='FivePrayer E2E' --post_content='[Fp_Single_CurrentTime]' \
+            --porcelain 2>/dev/null | tail -1)
+          echo "Created page ${ID}"
+          echo "FIVEPRAYER_E2E_PAGE_ID=${ID}" >> "$GITHUB_ENV"
+
+      - name: Run E2E tests
+        run: npx playwright test
+
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          # One artifact per core version: a fixed name collides between the
+          # two matrix jobs.
+          name: playwright-report-wp-${{ matrix.core }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+      - name: Stop WordPress
+        if: always()
+        run: npx wp-env stop || true

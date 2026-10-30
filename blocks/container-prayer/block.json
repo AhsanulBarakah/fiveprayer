@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "fiveprayer/container-prayer",
+    "title": "Container Prayer",
+    "category": "fiveprayer-blocks",
+    "icon": "layout",
+    "description": "A container block with nested elements and custom ID/class attributes",
+    "supports": {
+        "html": false,
+        "anchor": true,
+        "color": {
+            "background": true,
+            "text": true
+        },
+        "typography": {
+            "fontSize": true,
+            "lineHeight": true,
+            "textAlign": true
+        },
+        "spacing": {
+            "padding": true,
+            "margin": true
+        },
+        "dimensions": {
+            "minHeight": true
+        },
+        "align": [ "full", "wide" ],
+        "layout": {
+            "allowSwitching": true,
+            "default": {
+                "type": "flex"
+            }
+        }
+    },
+    "attributes": {
+        "customId": {
+            "type": "string",
+            "default": ""
+        },
+        "customClass": {
+            "type": "string",
+            "default": ""
+        },
+        "customAttributes": {
+            "type": "array",
+            "default": [],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "elementTag": {
+            "type": "string",
+            "default": "div"
+        }
+    },
+    "textdomain": "fiveprayer",
+    "editorScript": "file:./index.js",
+    "editorStyle": "file:./index.css",
+    "style": "file:./style-index.css"
+}

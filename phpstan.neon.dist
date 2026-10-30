@@ -1,0 +1,30 @@
+# PHPStan configuration for the shipped plugin.
+#
+# Level 6 on a WordPress plugin without stubs is mostly noise: WordPress core
+# classes and functions live in the WordPress install, not in a Composer
+# package, so every call would be "undefined". szepeviktor/phpstan-wordpress
+# supplies those stubs and is loaded by phpstan/extension-installer.
+#
+# The existing debt is frozen in phpstan-baseline.neon, so a new violation fails
+# `composer analyse` because it is not in the baseline. Regenerate it only after
+# fixing or reviewing a violation:
+#
+#   vendor/bin/phpstan analyse --generate-baseline --memory-limit=2G
+parameters:
+    level: 6
+    paths:
+        - php
+        - Fiveprayer.php
+    excludePaths:
+        - vendor
+        # Elementor and Breakdance are optional integrations: the plugin loads
+        # these files only when the builder is installed, so their parent class
+        # does not exist in CI. PHPStan cannot analyse a class whose parent it
+        # cannot resolve and refuses to ignore that message — the documented
+        # fix is to exclude the paths. Both entry points guard the load.
+        - php/classes/core/helpers/MetaField/BaseFivePrayerDynamicTag.php
+        - php/classes/core/helpers/MetaField/Elementor
+        - php/classes/core/helpers/MetaField/Breakdance
+    reportUnmatchedIgnoredErrors: true
+includes:
+    - phpstan-baseline.neon

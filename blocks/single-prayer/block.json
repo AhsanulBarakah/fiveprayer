@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "fiveprayer/single-prayer",
+    "version": "0.1.0",
+    "title": "Single Prayer",
+    "category": "fiveprayer-blocks",
+    "icon": "megaphone",
+    "description": "Single Prayer Block",
+    "example": {},
+    "attributes": {
+        "shortcode": {
+            "type": "string",
+            "default": "currentDate"
+        },
+        "removeNextWord": {
+            "type": "boolean",
+            "default": false
+        },
+        "removeSpecificWord": {
+            "type": "string",
+            "default": ""
+        },
+        "elementTag": {
+            "type": "string",
+            "default": "p",
+            "enum": [
+                "p", 
+                "div", 
+                "span", 
+                "section", 
+                "article", 
+                "aside", 
+                "header", 
+                "footer", 
+                "main", 
+                "nav",
+                "h1",
+                "h2", 
+                "h3", 
+                "h4", 
+                "h5", 
+                "h6", 
+                "time"
+            ]
+        },
+        "customId": {
+            "type": "string",
+            "default": ""
+        },
+        "customClass": {
+            "type": "string",
+            "default": ""
+        },
+        "customAttributes": {
+            "type": "array",
+            "default": [],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    },
+    "supports": {
+        "html": false   
+    },
+    "textdomain": "fiveprayer",
+    "editorScript": "file:./index.js",
+    "editorStyle": "file:./index.css",
+    "style": "file:./style-index.css",
+    "render": "file:./render.php",
+    "viewScript": "file:./view.js"
+}

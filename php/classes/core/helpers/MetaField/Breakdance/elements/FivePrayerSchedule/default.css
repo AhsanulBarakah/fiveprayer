@@ -1,0 +1,81 @@
+.fiveprayer-schedule-container .fiveprayer-schedule-element {
+    padding: 20px;
+    background-color: {{ properties.design.schedule_style.background_color ? properties.design.schedule_style.background_color : '#ffffff' }};
+    border-radius: {{ properties.design.schedule_style.border_radius ? properties.design.schedule_style.border_radius ~ 'px' : '5px' }};
+    border: {{ properties.design.schedule_style.show_borders ? '1px solid ' ~ (properties.design.schedule_style.border_color ? properties.design.schedule_style.border_color : '#ddd') : 'none' }};
+}
+
+.fiveprayer-schedule-container .schedule-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.3em;
+    color: #333;
+    text-align: center;
+}
+
+.fiveprayer-schedule-container .schedule-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.fiveprayer-schedule-container .schedule-list.horizontal {
+    flex-direction: row;
+}
+
+.fiveprayer-schedule-container .schedule-list.vertical {
+    flex-direction: column;
+}
+
+.fiveprayer-schedule-container .schedule-list.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.fiveprayer-schedule-container .schedule-item {
+    flex: 1;
+    min-width: 120px;
+    padding: {{ properties.design.schedule_style.padding ? properties.design.schedule_style.padding ~ 'px' : '10px' }};
+    text-align: center;
+    border: {{ properties.design.schedule_style.show_borders ? '1px solid ' ~ (properties.design.schedule_style.border_color ? properties.design.schedule_style.border_color : '#eee') : 'none' }};
+    border-radius: {{ properties.design.schedule_style.border_radius ? properties.design.schedule_style.border_radius ~ 'px' : '3px' }};
+    background-color: rgba(0,0,0,0.02);
+}
+
+.fiveprayer-schedule-container .prayer-name {
+    font-weight: bold;
+    color: {{ properties.design.schedule_style.prayer_name_color ? properties.design.schedule_style.prayer_name_color : '#333' }};
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.fiveprayer-schedule-container .prayer-time {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: {{ properties.design.schedule_style.time_color ? properties.design.schedule_style.time_color : '#0073aa' }};
+    margin-bottom: 3px;
+}
+
+.fiveprayer-schedule-container .iqamah-time {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.fiveprayer-schedule-container .next-prayer-countdown {
+    margin-top: 15px;
+    padding: 10px;
+    text-align: center;
+    background-color: rgba(0,115,170,0.1);
+    border-radius: 5px;
+    border: 1px dashed #0073aa;
+}
+
+.fiveprayer-schedule-container .next-prayer-countdown .next-prayer-name {
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.fiveprayer-schedule-container .next-prayer-countdown .countdown-timer {
+    font-weight: bold;
+    color: #d63638;
+}

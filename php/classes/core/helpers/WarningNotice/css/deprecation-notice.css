@@ -1,0 +1,260 @@
+/* Main Container */
+.fiveprayer-deprecation-manager {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+/* Header */
+.fiveprayer-deprecation-header {
+    background: #f0f6fc;
+    border-bottom: 1px solid #d3d9e0;
+    padding: 20px;
+    position: relative;
+}
+.fiveprayer-deprecation-header h2 {
+    margin: 0 0 5px 0;
+    color: #1d2327;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.fiveprayer-deprecation-header p {
+    margin: 0;
+    color: #646970;
+}
+
+/* Dismiss Button */
+.fiveprayer-dismiss-notice {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #dcdcde;
+    border: none;
+    border-radius: 3px;
+    color: #1d2327;
+    cursor: pointer;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+.fiveprayer-dismiss-notice:hover {
+    background: #c3c4c7;
+}
+
+/* List Items */
+.fiveprayer-deprecation-list {
+    padding: 0;
+    margin: 0;
+}
+.fiveprayer-deprecation-item {
+    border-bottom: 1px solid #d3d9e0;
+}
+.fiveprayer-deprecation-item:last-child {
+    border-bottom: none;
+}
+
+/* Summary */
+.fiveprayer-deprecation-summary {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.fiveprayer-deprecation-summary:hover {
+    background: #f6f7f7;
+}
+.fiveprayer-deprecation-icon {
+    width: 40px;
+    height: 40px;
+    background: #f0f6fc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: #2271b1;
+}
+.fiveprayer-deprecation-info {
+    flex: 1;
+}
+.fiveprayer-deprecation-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 15px;
+}
+.fiveprayer-deprecation-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+    color: #646970;
+}
+.fiveprayer-toggle-state span {
+    display: inline;
+    background-color: #FFC107;
+    padding-inline: 10px;
+    padding-block: 8px;
+    border-radius: 3px;
+    width: fit-content;
+    color: white;
+    font-weight: 400;
+    font-size: medium;
+}
+.fiveprayer-show-when-open {
+    display: none;
+}
+.fiveprayer-deprecation-toggle[aria-expanded="true"] ~ .fiveprayer-deprecation-info .fiveprayer-show-when-closed {
+    display: none;
+}
+.fiveprayer-deprecation-toggle[aria-expanded="true"] ~ .fiveprayer-deprecation-info .fiveprayer-show-when-open {
+    display: inline;
+}
+.fiveprayer-deprecation-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #646970;
+    margin-left: auto;
+    transition: transform 0.2s;
+}
+
+
+/* Details */
+.fiveprayer-deprecation-details {
+    padding: 0 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+.fiveprayer-deprecation-details.active {
+    padding: 0 20px 20px;
+    max-height: 1000px;
+}
+
+/* Shortcode Comparison */
+.fiveprayer-shortcode-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+.fiveprayer-old-shortcode, .fiveprayer-new-shortcode {
+    padding: 15px;
+    border-radius: 4px;
+}
+.fiveprayer-old-shortcode {
+    background: #fcf0f1;
+    border-left: 4px solid #d63638;
+}
+.fiveprayer-new-shortcode {
+    background: #f0f6f0;
+    border-left: 4px solid #00a32a;
+}
+.fiveprayer-old-shortcode h4, .fiveprayer-new-shortcode h4 {
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.fiveprayer-old-shortcode h4 {
+    color: #d63638;
+}
+.fiveprayer-new-shortcode h4 {
+    color: #00a32a;
+}
+.fiveprayer-old-shortcode code, .fiveprayer-new-shortcode code {
+    display: block;
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Page List */
+.fiveprayer-page-list {
+    margin: 20px 0;
+}
+.fiveprayer-page-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #d3d9e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.fiveprayer-page-list li {
+    padding: 10px 15px;
+    border-bottom: 1px solid #d3d9e0;
+}
+.fiveprayer-page-list li:last-child {
+    border-bottom: none;
+}
+.fiveprayer-page-list a {
+    text-decoration: none;
+    color: #2271b1;
+}
+.fiveprayer-page-list a:hover {
+    text-decoration: underline;
+}
+
+/* Footer */
+.fiveprayer-deprecation-footer {
+    padding: 15px 20px;
+    background: #f6f7f7;
+    border-top: 1px solid #d3d9e0;
+    font-size: 13px;
+    color: #646970;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.fiveprayer-debug-panel {
+    background: #f8f9f9;
+    border-left: 4px solid #72aee6;
+    padding: 15px;
+}
+
+.fiveprayer-debug-panel h3 {
+    margin-top: 0;
+    color: #1d2327;
+}
+
+.fiveprayer-countdown {
+    font-weight: bold;
+    color: #d63638;
+}
+
+.fiveprayer-success-notice .fiveprayer-countdown {
+    color: #00a32a;
+}
+.fiveprayer-deprecation-details {
+    display: none;
+    padding: 10px 0;
+}
+.fiveprayer-deprecation-details.active {
+    display: block;
+}
+.fiveprayer-toggle-state span {
+    margin-left: 0.5em;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .fiveprayer-shortcode-comparison {
+        grid-template-columns: 1fr;
+    }
+    .fiveprayer-deprecation-header {
+        padding-right: 120px;
+    }
+    .fiveprayer-dismiss-notice {
+        top: 15px;
+        right: 15px;
+    }
+}

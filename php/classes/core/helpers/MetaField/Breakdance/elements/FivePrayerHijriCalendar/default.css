@@ -1,0 +1,103 @@
+.fiveprayer-hijri-calendar-container .fiveprayer-hijri-calendar-element {
+    padding: 20px;
+    background-color: {{ properties.design.calendar_style.background_color ? properties.design.calendar_style.background_color : '#ffffff' }};
+    border-radius: {{ properties.design.calendar_style.border_radius ? properties.design.calendar_style.border_radius ~ 'px' : '5px' }};
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.3em;
+    color: {{ properties.design.calendar_style.header_color ? properties.design.calendar_style.header_color : '#0073aa' }};
+    text-align: center;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 15px;
+}
+
+.fiveprayer-hijri-calendar-container .day-name {
+    text-align: center;
+    padding: 8px 4px;
+    font-weight: bold;
+    color: {{ properties.design.calendar_style.day_names_color ? properties.design.calendar_style.day_names_color : '#333' }};
+    font-size: 0.8em;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell {
+    border: 1px solid #eee;
+    padding: 8px 4px;
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell.empty {
+    background-color: #f9f9f9;
+    border: 1px dashed #ddd;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell.today-highlight {
+    background-color: {{ properties.design.calendar_style.today_highlight_color ? properties.design.calendar_style.today_highlight_color : '#ff6b6b' }};
+    color: white;
+    border-color: {{ properties.design.calendar_style.today_highlight_color ? properties.design.calendar_style.today_highlight_color : '#ff6b6b' }};
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell .gregorian-date {
+    font-weight: bold;
+    color: {{ properties.design.calendar_style.date_color ? properties.design.calendar_style.date_color : '#666' }};
+    margin-bottom: 2px;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell .hijri-date {
+    font-size: 0.7em;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell .hijri-month {
+    font-size: 0.6em;
+    text-transform: uppercase;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-cell .prayer-indicator {
+    font-size: 0.6em;
+    color: #0073aa;
+    margin-top: 2px;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-info {
+    text-align: center;
+    padding: 10px;
+    background-color: rgba(0,115,170,0.05);
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-info p {
+    margin: 5px 0;
+}
+
+/* Calendar size variations */
+.fiveprayer-hijri-calendar-container .calendar-grid.small .calendar-cell {
+    min-height: 40px;
+    font-size: 0.7em;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-grid.medium .calendar-cell {
+    min-height: 60px;
+    font-size: 0.8em;
+}
+
+.fiveprayer-hijri-calendar-container .calendar-grid.large .calendar-cell {
+    min-height: 80px;
+    font-size: 0.9em;
+}

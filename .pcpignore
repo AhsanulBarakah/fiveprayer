@@ -1,0 +1,49 @@
+# .pcpignore — folders and files excluded from Plugin Check (PCP) scans.
+#
+# Everything listed here is development-only and is NOT part of the released
+# plugin. The production package is defined by the "files" field in
+# package.json and contains only:
+#   build-admin/  build-blocks/  client-sdk/  php/  vendor/  languages/
+#   Fiveprayer.php  index.php  README.md  changelog.txt  LICENSE.txt
+#
+# Enable this file on the check screen:
+#   Tools -> Plugin Check -> tick "Use .pcpignore custom exclusions"
+# Or from the command line:
+#   wp plugin check fiveprayer --use-pcpignore
+#
+# Format: one path per line, anchored to the plugin root (not matched at any
+# depth). A trailing slash excludes a directory; `*` and `?` are supported.
+
+# Source, docs and dev tooling
+src/
+blocks/
+docs/
+utils/
+tests/
+.freebuff/
+.kilo/
+
+# Build and editor configuration
+# (compiled output lives in build-admin/ and build-blocks/, which ARE shipped)
+.babelrc
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+webpack.config.js
+removeEmptyTypesPlugin.js
+
+# Package manager manifests and lock files
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+composer.json
+composer.lock
+
+# VCS metadata
+.gitattributes
+.gitignore
+.github/
+.githooks/
+
+# Local release artifacts
+*.zip

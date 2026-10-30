@@ -1,0 +1,45 @@
+<div class="{{ '%%CLASSES%%' }}" {{ '%%ATTRIBUTES%%' }} {{ '%%PSEUDO_SELECTOR_CLASSES%%' }}>
+    <div class="fiveprayer-countdown-container">
+        <div class="countdown-header">
+            <h3>Countdown to {{ properties.content.countdown_settings.target_prayer == 'next' ? 'Next Prayer' : properties.content.countdown_settings.target_prayer|title }}</h3>
+        </div>
+        
+        <div class="countdown-display {{ properties.design.countdown_style.display_format }}">
+            {% if properties.content.countdown_settings.show_days %}
+            <div class="countdown-unit days">
+                <div class="countdown-number">00</div>
+                <div class="countdown-label">Days</div>
+            </div>
+            {% endif %}
+            
+            {% if properties.content.countdown_settings.show_hours %}
+            <div class="countdown-unit hours">
+                <div class="countdown-number">00</div>
+                <div class="countdown-label">Hours</div>
+            </div>
+            {% endif %}
+            
+            {% if properties.content.countdown_settings.show_minutes %}
+            <div class="countdown-unit minutes">
+                <div class="countdown-number">00</div>
+                <div class="countdown-label">Minutes</div>
+            </div>
+            {% endif %}
+            
+            {% if properties.content.countdown_settings.show_seconds %}
+            <div class="countdown-unit seconds">
+                <div class="countdown-number">00</div>
+                <div class="countdown-label">Seconds</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="countdown-message" style="display:none;">
+            {% if properties.content.countdown_settings.custom_message %}
+                {{ properties.content.countdown_settings.custom_message }}
+            {% else %}
+                Time for prayer!
+            {% endif %}
+        </div>
+    </div>
+</div>

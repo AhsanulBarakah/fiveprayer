@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* Tailwind v4 emits theme/base/components/utilities as native cascade layers. */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+/* v3 preflight: v4's preflight resets margins on every element, which would
+   override the WordPress admin styles the plugin UI is designed against. */
+@import "./preflight-v3.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@config "../tailwind.config.js";
+
+@theme {
+	/* Match the font stack Tailwind v3 generated, so text metrics stay identical. */
+	--font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+body {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	background-color: #f7fafb;
+}

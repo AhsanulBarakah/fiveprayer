@@ -1,0 +1,37 @@
+# Accidental Windows reserved device name file
+nul
+nul.*
+
+/vendor/
+
+# Tool caches for PHPStan, PHPUnit and phpcs
+/.phpstan.cache/
+/.phpunit.cache/
+.phpcs.cache
+
+# Release artifacts produced by `npm run plugin:zip`
+*.zip
+/composer.lock
+/.idea/
+/node_modules/
+/build-admin/
+/build-blocks/
+/build/
+.aider*
+temp_*
+part*
+diagnostic_*.txt
+utility_*.txt
+comprehensive_*.txt
+watchdog_*.txt
+watchdog_*.json
+plugin
+subplugins
+oxygen
+elements-hive-for-breakdance
+breakfive
+elementor-pro_back
+
+# Playwright E2E artifacts
+/test-results/
+/playwright-report/

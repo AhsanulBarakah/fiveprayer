@@ -1,0 +1,49 @@
+{
+    "name": "jamaaldev/fiveprayer",
+    "description": "FivePrayer - Plugin is For Muslim PrayerTimes.",
+    "type": "wordpress-plugin",
+    "autoload": {
+      "psr-4": {
+        "FivePrayer\\Core\\API\\": "php/classes/core/API/",
+        "FivePrayer\\Core\\Cache\\helpers\\": "php/classes/core/Cache/helpers/",
+        "FivePrayer\\Core\\Controllers\\API\\": "php/classes/core/controllers/api/",
+        "FivePrayer\\Core\\Controllers\\API\\EndPoints\\": "php/classes/core/controllers/api/endpoints/",
+        "FivePrayer\\Core\\Daily\\Styles\\": "php/classes/core/Daily/Styles/",
+        "FivePrayer\\Core\\Helpers\\WarningNotice\\": "php/classes/core/helpers/WarningNotice/",
+        "FivePrayer\\Core\\ShortCodes\\Data\\": "php/classes/core/ShortCodes/Data/",
+        "FivePrayer\\Core\\ShortCodes\\Managers\\": "php/classes/core/ShortCodes/Managers/",
+        "FivePrayer\\Core\\ShortCodes\\Renderers\\": "php/classes/core/ShortCodes/Renderers/",
+        "FivePrayer\\Core\\Database\\": "php/classes/core/database/",
+        "FivePrayer\\Core\\Helpers\\": "php/classes/core/helpers/",
+        "FivePrayer\\Core\\Controllers\\": "php/classes/core/controllers/",
+        "FivePrayer\\Core\\Blocks\\": "php/classes/core/Blocks/",
+        "FivePrayer\\Core\\Admin\\": "php/classes/core/Admin/",
+        "FivePrayer\\Core\\Cache\\": "php/classes/core/Cache/",
+        "FivePrayer\\Core\\Calendar\\": "php/classes/core/Calendar/",
+        "FivePrayer\\Core\\Daily\\": "php/classes/core/Daily/",
+        "FivePrayer\\Core\\Media\\": "php/classes/core/Media/",
+        "FivePrayer\\Core\\Security\\": "php/classes/core/Security/",
+        "FivePrayer\\Core\\ShortCodes\\": "php/classes/core/ShortCodes/",
+        "FivePrayer\\Core\\": "php/classes/core/"
+      }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2",
+        "szepeviktor/phpstan-wordpress": "^2",
+        "phpstan/extension-installer": "^1",
+        "wp-coding-standards/wpcs": "^3",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1",
+        "phpunit/phpunit": "^10.5"
+    },
+    "scripts": {
+        "analyse": "phpstan analyse --no-progress --memory-limit=1G",
+        "lint:php": "phpcs",
+        "test:phpunit": "phpunit"
+    }
+}

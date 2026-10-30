@@ -1,0 +1,191 @@
+name: Security
+
+# The security checks that belong to no build: known-vulnerable dependencies
+# and the WordPress hardening regressions. checks.yml still runs the full PHP
+# and JavaScript suites; this job exists so a hardening regression or a
+# vulnerable dependency fails a check named for it, on its own.
+on:
+  push:
+    branches:
+      - main
+      - fiveprayer-v3-release
+  pull_request:
+  schedule:
+    # A CVE can be disclosed months after the last commit, so the audit also
+    # runs weekly instead of only when something happens to be pushed.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependency audit and PHP syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      # No pnpm cache here: this job never installs, so the store directory does
+      # not exist and setup-node's cache step fails on the missing path.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      # Reads the lockfile, not node_modules, so the audit needs no install.
+      # High and critical fail the job; low and moderate are still printed but
+      # do not block a merge on a package upstream has not fixed yet.
+      - name: Audit npm dependencies
+        run: pnpm audit --audit-level=high
+
+      # composer.lock is gitignored, so --locked fails on a clean checkout; the
+      # audit only runs once a lockfile is actually committed. composer.json
+      # declares no dependencies today, so there is nothing to report yet.
+      - name: Audit PHP dependencies
+        run: |
+          if [ -f composer.lock ]; then
+            composer audit --locked --no-interaction
+          else
+            echo 'No composer.lock committed — composer.json declares no dependencies.'
+          fi
+
+      - name: PHP syntax
+        run: |
+          find php Fiveprayer.php index.php -name '*.php' -print0 2>/dev/null \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+  php-security-scan:
+    name: PHP security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No dependency cache: the scan is plain Node with no packages to install.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The hardening suite below covers the capability and REST layer; this
+      # covers the code that suite never reaches (eval, shell execution,
+      # unserialize, SQL built from request data).
+      - name: Scan for dangerous PHP constructs
+        run: node tools/security-scan.mjs
+
+      - name: PHP syntax
+        run: |
+          find php Fiveprayer.php index.php -name '*.php' -print0 2>/dev/null \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+  wordpress-security:
+    name: WordPress security hardening
+    runs-on: ubuntu-latest
+    # The hardening suite asserts against the live REST server and the real
+    # capability system, so it needs an installed WordPress and its database.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fiveprayer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      FIVEPRAYER_DB_NAME: fiveprayer_test
+      FIVEPRAYER_DB_USER: root
+      FIVEPRAYER_DB_PASSWORD: root
+      FIVEPRAYER_DB_HOST: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring, curl, dom, fileinfo, intl, json, openssl, simplexml, xml, zip
+          coverage: none
+
+      - name: Cache the WordPress tarball
+        uses: actions/cache@v4
+        with:
+          path: ~/.wp-cache
+          key: wp-tarball-${{ runner.os }}-6.7
+
+      # The same fixture installer tools/php-suite.sh uses, so this job and the
+      # local runner cannot drift apart on how WordPress is set up.
+      - name: Install WordPress
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set -euo pipefail
+          WP_DIR="$FIVEPRAYER_WP_DIR"
+          mkdir -p "$WP_DIR" "$HOME/.wp-cache"
+          if [ ! -f "$HOME/.wp-cache/wordpress-6.7.tar.gz" ]; then
+            curl -fsSL https://wordpress.org/wordpress-6.7.tar.gz -o "$HOME/.wp-cache/wordpress-6.7.tar.gz"
+          fi
+          tar -xzf "$HOME/.wp-cache/wordpress-6.7.tar.gz" -C "$WP_DIR" --strip-components=1
+          cp tests/php/fixtures/wp-config.php "$WP_DIR/wp-config.php"
+          cp tests/php/fixtures/install-wordpress.php "$WP_DIR/install-wordpress.php"
+          cp tests/php/fixtures/activate-plugin.php "$WP_DIR/activate-plugin.php"
+          php "$WP_DIR/install-wordpress.php"
+
+      - name: Install the plugin
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set -euo pipefail
+          WP_DIR="$FIVEPRAYER_WP_DIR"
+          PLUGIN_DIR="$WP_DIR/wp-content/plugins/fiveprayer"
+          mkdir -p "$PLUGIN_DIR"
+          # tar rather than rsync so the exclude list matches tools/php-suite.sh.
+          tar -C "$PWD" \
+            --exclude=.git --exclude=node_modules --exclude=vendor --exclude=.freebuff \
+            -cf - . | tar -C "$PLUGIN_DIR" -xf -
+          composer install --no-interaction --no-progress --quiet \
+            --working-dir="$PLUGIN_DIR"
+          php "$WP_DIR/activate-plugin.php"
+
+      - name: Security hardening checks
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: php "$FIVEPRAYER_WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-security-hardening.php"
+
+      # Keep only the failing assertions, which GitHub lists as annotations
+      # instead of leaving them buried in the job log.
+      - name: Failing checks
+        if: failure()
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set +e
+          suite="$FIVEPRAYER_WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-security-hardening.php"
+          [ -f "$suite" ] || exit 0
+          php "$suite" 2>&1 | grep -E '^FAIL' | sed 's/^/::error::/'
+          exit 0
+
+      - name: WordPress diagnostics
+        if: failure()
+        env:
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          WP_DIR="$FIVEPRAYER_WP_DIR"
+          if [ -f "$WP_DIR/wp-content/debug.log" ]; then
+            echo '--- wp-content/debug.log ---'
+            tail -n 100 "$WP_DIR/wp-content/debug.log"
+          fi

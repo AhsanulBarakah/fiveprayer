@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+#
+# FivePrayer pre-commit checks.
+#
+# Runs the cheap checks that catch the mistakes that used to slip through:
+# PHP syntax on the staged files, the TypeScript typecheck, the unit suite
+# (including the shortcode-reference and bundle-budget guards) and the
+# TV-display harness. The full production build runs in CI, not here.
+#
+# One-time setup, from the repo root:
+#   npm run hooks:install
+#
+# Escape hatch when you knowingly commit work in progress:
+#   SKIP_CHECKS=1 git commit -m "…"
+# or the usual `git commit --no-verify`.
+
+set -u
+
+if [ "${SKIP_CHECKS:-0}" = "1" ]; then
+  echo "pre-commit: SKIP_CHECKS=1 — checks skipped."
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 1
+
+failures=0
+run_step() {
+  local label="$1"
+  shift
+  printf '\n\033[1m▸ %s\033[0m\n' "$label"
+  if "$@"; then
+    return 0
+  fi
+  printf '\033[31m✗ %s failed\033[0m\n' "$label"
+  failures=$((failures + 1))
+  return 1
+}
+
+# 1. PHP syntax on staged files only — fast, and catches the typo that would
+#    otherwise fatal the whole plugin on the site.
+staged_php=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.php$' || true)
+if [ -n "$staged_php" ]; then
+  printf '\n\033[1m▸ php -l (staged files)\033[0m\n'
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+    if ! php -l "$file" > /dev/null 2>&1; then
+      php -l "$file"
+      printf '\033[31m✗ %s failed\033[0m\n' "php -l"
+      failures=$((failures + 1))
+    fi
+  done <<< "$staged_php"
+  [ "$failures" -eq 0 ] && echo "PHP syntax OK ($(echo "$staged_php" | wc -l | tr -d ' ') file(s))."
+else
+  echo "pre-commit: no staged PHP files."
+fi
+
+# 2. Stylesheets outside the admin app must stay inside the plugin's
+#    namespace (no `.card`, no `:root`), or they leak into the host page.
+run_step "css scope" npm run --silent lint:css
+
+# 3. TypeScript across the whole project (tests included).
+run_step "typecheck" npm run --silent typecheck
+
+# 4. Unit suite: stores, meta loaders, calendar/rounding helpers, docs guards
+#    and the bundle budget (skipped internally when build-admin is absent).
+run_step "unit tests" npm run --silent test:unit
+
+# 5. Browser-free harness for the TV display fitting logic.
+run_step "tv display harness" node tests/js/test-tv-display-fit.mjs
+
+if [ "$failures" -ne 0 ]; then
+  printf '\n\033[31mpre-commit: %d check(s) failed — commit blocked.\033[0m\n' "$failures"
+  echo "Fix the failures above, or use SKIP_CHECKS=1 / --no-verify to commit anyway."
+  exit 1
+fi
+
+printf '\n\033[32mpre-commit: all checks passed.\033[0m\n'
+exit 0

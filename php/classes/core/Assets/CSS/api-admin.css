@@ -1,0 +1,1655 @@
+/* FivePrayer API Admin Styles */
+.fiveprayer-api-admin {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.fiveprayer-api-header {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.fiveprayer-api-header code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.fiveprayer-api-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .fiveprayer-api-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fiveprayer-api-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.fiveprayer-api-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fiveprayer-api-card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #23282d;
+    font-size: 1.4em;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.fiveprayer-api-card h3 {
+    color: #23282d;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.fiveprayer-form {
+    margin-bottom: 20px;
+}
+
+.fiveprayer-form-group {
+    margin-bottom: 15px;
+}
+
+.fiveprayer-form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #23282d;
+}
+
+.fiveprayer-form-group input,
+.fiveprayer-form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.fiveprayer-form-group input:focus,
+.fiveprayer-form-group textarea:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+.fiveprayer-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.fiveprayer-btn-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.fiveprayer-btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.fiveprayer-btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.fiveprayer-btn-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.fiveprayer-btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin-right: 5px;
+}
+
+.fiveprayer-result {
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 15px;
+    font-weight: 500;
+}
+
+.fiveprayer-result.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.fiveprayer-result.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.fiveprayer-api-docs code {
+    background: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: block;
+    margin: 10px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.fiveprayer-api-docs ul {
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+.fiveprayer-api-docs li {
+    margin-bottom: 8px;
+}
+
+.fiveprayer-api-docs a {
+    color: #0073aa;
+    text-decoration: none;
+}
+
+.fiveprayer-api-docs a:hover {
+    text-decoration: underline;
+}
+
+.fiveprayer-docs-note {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e7f3ff;
+    border-left: 4px solid #0073aa;
+    border-radius: 4px;
+}
+
+.fiveprayer-docs-note a {
+    color: #0073aa;
+    font-weight: 600;
+}
+
+/* Modern flat table for API Keys */
+.fiveprayer-keys-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.fiveprayer-keys-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.fiveprayer-keys-table thead {
+    background: #f0f4f8;
+}
+
+.fiveprayer-keys-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #444;
+    border-bottom: 2px solid #d0d7de;
+    white-space: nowrap;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.fiveprayer-keys-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+    color: #333;
+}
+
+.fiveprayer-keys-table tbody tr:hover {
+    background: #f7f9fc;
+}
+
+.fiveprayer-keys-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.fiveprayer-keys-table .fiveprayer-row-expired td {
+    background: #fff5f5;
+    color: #777;
+}
+
+/* Name cell */
+.fiveprayer-name-cell {
+    min-width: 140px;
+}
+
+.fiveprayer-name-cell strong {
+    display: block;
+    color: #1a1a2e;
+    font-size: 14px;
+}
+
+.fiveprayer-description-tooltip {
+    color: #888;
+    font-size: 12px;
+    margin-top: 2px;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+}
+
+/* Key cell */
+.fiveprayer-key-code {
+    font-size: 11px;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #555;
+}
+
+/* Status badge */
+.fiveprayer-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.fiveprayer-status-active     { background: #d1fae5; color: #065f46; }
+.fiveprayer-status-inactive   { background: #f3d6d6; color: #7f1d1d; }
+.fiveprayer-status-expired    { background: #fee2e2; color: #991b1b; }
+
+/* Permission tag pill */
+.fiveprayer-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    background: #eef2ff;
+    color: #3730a3;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* Actions cell */
+.fiveprayer-actions-cell {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.fiveprayer-actions-wrapper {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.fiveprayer-btn-icon {
+    padding: 4px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    background: transparent;
+}
+
+.fiveprayer-btn-icon:hover {
+    opacity: 0.85;
+    transform: scale(1.05);
+}
+
+.fiveprayer-btn-icon .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.fiveprayer-btn-warning  { background: #fff3cd; color: #856404; }
+.fiveprayer-btn-secondary { background: #e2e8f0; color: #475569; }
+.fiveprayer-btn-danger   { background: #fee2e2; color: #991b1b; }
+.fiveprayer-btn-success  { background: #d1fae5; color: #065f46; }
+
+/* Empty state */
+.fiveprayer-no-keys-cell {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-style: italic;
+}
+
+/* Key column header highlight */
+.fiveprayer-keys-table th:nth-child(2) { color: #0073aa; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .fiveprayer-keys-table {
+        font-size: 12px;
+    }
+    .fiveprayer-keys-table th,
+    .fiveprayer-keys-table td {
+        padding: 8px 6px;
+    }
+}
+
+@media (max-width: 640px) {
+    .fiveprayer-keys-table th:nth-child(8),
+    .fiveprayer-keys-table td:nth-child(8),
+    .fiveprayer-keys-table th:nth-child(9),
+    .fiveprayer-keys-table td:nth-child(9),
+    .fiveprayer-keys-table th:nth-child(10),
+    .fiveprayer-keys-table td:nth-child(10) {
+        display: none;
+    }
+}
+
+/* Loading spinner */
+.fiveprayer-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: fiveprayer-spin 1s linear infinite;
+}
+
+@keyframes fiveprayer-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast notification */
+.fiveprayer-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.fiveprayer-toast.show {
+    opacity: 1;
+}
+
+.fiveprayer-toast.success {
+    background: #28a745;
+}
+
+.fiveprayer-toast.error {
+    background: #dc3545;
+}
+
+/* Modal Dialog */
+.fiveprayer-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fiveprayer-fadeIn 0.3s ease;
+}
+
+@keyframes fiveprayer-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fiveprayer-modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    animation: fiveprayer-slideIn 0.3s ease;
+}
+
+@keyframes fiveprayer-slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.fiveprayer-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fiveprayer-modal-header h3 {
+    margin: 0;
+    color: #23282d;
+    font-size: 1.2em;
+}
+
+.fiveprayer-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.fiveprayer-modal-close:hover {
+    color: #dc3545;
+}
+
+.fiveprayer-modal-body {
+    padding: 20px;
+    color: #23282d;
+    line-height: 1.6;
+}
+
+.fiveprayer-modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.fiveprayer-btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.fiveprayer-btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Modern Card-based API Keys List */
+.fiveprayer-keys-list {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fiveprayer-no-keys {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f9f9f9;
+    height:fit-content;
+    border-radius: 8px;
+    font-style: italic;
+}
+
+.fiveprayer-key-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 1px rgba(0, 0, 0, 0.08);
+    min-height: 50px;
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.fiveprayer-key-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.fiveprayer-key-card.fiveprayer-row-expired {
+    opacity: 0.7;
+    border-left: 4px solid #dc3545;
+}
+
+.fiveprayer-key-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.fiveprayer-key-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fiveprayer-key-title strong {
+    font-size: 16px;
+    color: #23282d;
+}
+
+.fiveprayer-key-description {
+    font-size: 13px;
+    color: #666;
+    font-weight: normal;
+}
+
+.fiveprayer-key-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    padding: 16px 20px;
+}
+
+.fiveprayer-key-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fiveprayer-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: 0.5px;
+}
+
+.fiveprayer-permissions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.fiveprayer-permission-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #e7f3ff;
+    color: #0073aa;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.fiveprayer-key-mask {
+    font-size: 12px;
+    color: #666;
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.fiveprayer-key-actions {
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.fiveprayer-actions-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .fiveprayer-key-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .fiveprayer-key-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+/* Masked key row inside card */
+.fiveprayer-key-masked-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border-top: 1px solid #e8e8e8;
+}
+
+.fiveprayer-key-mask {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #555;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.fiveprayer-key-mask-text {
+    white-space: nowrap;
+    cursor: help;
+}
+
+.fiveprayer-btn-xs {
+    padding: 2px 10px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid #d0d7de;
+    background: #fff;
+    color: #0073aa;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+    line-height: 20px;
+    flex-shrink: 0;
+}
+
+.fiveprayer-btn-xs:hover {
+    background: #e7f3ff;
+    border-color: #0073aa;
+}
+
+.fiveprayer-btn-copy-masked {
+    border-color: #28a745;
+    color: #155724;
+}
+
+.fiveprayer-btn-copy-masked:hover {
+    background: #d1fae5;
+    border-color: #28a745;
+}
+
+/* Dashicon clipboard icon */
+.fiveprayer-copy-key .dashicons-clipboard::before {
+    content: "\f481";
+}
+
+/* ===== Compact Key Card ===== */
+.fiveprayer-keys-list {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fiveprayer-no-keys {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f9f9f9;
+    border-radius: 8px;
+    font-style: italic;
+}
+
+.fiveprayer-key-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    box-shadow: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.fiveprayer-key-card:hover {
+    background: #fafafa;
+    border-color: #d5d5d5;
+    box-shadow: none;
+    transform: none;
+}
+
+.fiveprayer-key-card.fiveprayer-row-expired {
+    opacity: 0.65;
+    border-left: 3px solid #dc3545;
+}
+
+.fiveprayer-key-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border-bottom: none;
+}
+
+.fiveprayer-key-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.fiveprayer-key-name-link {
+    text-decoration: none;
+    color: #0073aa;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.fiveprayer-key-name-link:hover {
+    color: #005a87;
+    text-decoration: underline;
+}
+
+.fiveprayer-key-description {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.fiveprayer-key-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.fiveprayer-usage-badge {
+    font-size: 11px;
+    color: #666;
+    background: #f2f4f7;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* Small outline buttons */
+.fiveprayer-btn-sm {
+    padding: 3px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.15s;
+}
+
+.fiveprayer-btn-outline {
+    border-color: #d0d7de;
+    color: #555;
+}
+.fiveprayer-btn-outline:hover {
+    background: #f0f4f8;
+    border-color: #b0bcc9;
+}
+
+.fiveprayer-btn-outline-primary {
+    border-color: #0073aa;
+    color: #0073aa;
+}
+.fiveprayer-btn-outline-primary:hover {
+    background: #e7f3ff;
+}
+
+.fiveprayer-btn-outline-warning {
+    border-color: #ffc107;
+    color: #856404;
+}
+.fiveprayer-btn-outline-warning:hover {
+    background: #fff3cd;
+}
+
+.fiveprayer-btn-outline-warning {
+    border-color: #ffc107;
+    color: #856404;
+}
+.fiveprayer-btn-outline-warning:hover {
+    background: #fff3cd;
+}
+
+.fiveprayer-btn-outline-secondary {
+    border-color: #c4cdd5;
+    color: #475569;
+}
+.fiveprayer-btn-outline-secondary:hover {
+    background: #e2e8f0;
+}
+
+.fiveprayer-btn-outline-success {
+    border-color: #28a745;
+    color: #155724;
+}
+.fiveprayer-btn-outline-success:hover {
+    background: #d1fae5;
+}
+
+.fiveprayer-btn-outline-danger {
+    border-color: #dc3545;
+    color: #991b1b;
+}
+.fiveprayer-btn-outline-danger:hover {
+    background: #fee2e2;
+}
+
+.fiveprayer-btn-sm .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.fiveprayer-actions-wrapper {
+    display: inline-flex;
+    gap: 3px;
+}
+
+/* ===== Detail Modal ===== */
+.fiveprayer-detail-modal-content {
+    max-width: 650px;
+    width: 95%;
+    max-height: 85vh;
+    margin: 5vh auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.fiveprayer-detail-modal-content .fiveprayer-modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 16px 20px;
+}
+
+.fiveprayer-detail-modal-content .fiveprayer-modal-header {
+    flex: 0 0 auto;
+}
+
+.fiveprayer-detail-modal-content .fiveprayer-modal-footer {
+    flex: 0 0 auto;
+}
+
+.fiveprayer-detail-loading {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+.fiveprayer-detail-error {
+    text-align: center;
+    padding: 40px;
+    color: #721c24;
+    background: #f8d7da;
+    border-radius: 4px;
+}
+
+.fiveprayer-detail-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.fiveprayer-detail-section {
+    padding: 14px 0;
+}
+
+.fiveprayer-detail-section:first-child {
+    padding-top: 0;
+}
+
+.fiveprayer-detail-section + .fiveprayer-detail-section {
+    border-top: 1px solid #eee;
+}
+
+.fiveprayer-detail-section h4 {
+    margin: 0 0 10px 0;
+    color: #444;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fiveprayer-detail-row {
+    display: flex;
+    padding: 5px 0;
+    align-items: flex-start;
+}
+
+.fiveprayer-detail-row .fiveprayer-detail-label {
+    flex: 0 0 130px;
+    font-weight: 600;
+    color: #555;
+    font-size: 13px;
+    padding-right: 12px;
+}
+
+.fiveprayer-detail-row .fiveprayer-detail-value {
+    flex: 1;
+    color: #222;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.fiveprayer-detail-row .fiveprayer-detail-value em {
+    color: #999;
+    font-style: italic;
+}
+
+/* Edit mode inputs */
+.fiveprayer-edit-input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.fiveprayer-edit-input:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.15);
+}
+
+textarea.fiveprayer-edit-input {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.fiveprayer-detail-section .fiveprayer-form-group {
+    margin-bottom: 12px;
+}
+
+.fiveprayer-detail-section .fiveprayer-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.fiveprayer-detail-section .fiveprayer-form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #555;
+}
+
+.fiveprayer-detail-section .fiveprayer-form-group small {
+    display: block;
+    margin-top: 2px;
+    color: #888;
+    font-size: 11px;
+}
+
+/* ===== Legacy Key Migration Notice ===== */
+.fiveprayer-legacy-keys-notice {
+    border-left-color: #f0ad4e;
+    background: #fffaf0;
+    padding: 12px 15px !important;
+}
+
+.fiveprayer-legacy-keys-notice p {
+    margin: 6px 0;
+    font-size: 13px;
+}
+
+.fiveprayer-legacy-keys-notice .button-primary {
+    background: #f0ad4e;
+    border-color: #eea236;
+    color: #fff;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+.fiveprayer-legacy-keys-notice .button-primary:hover {
+    background: #ec971f;
+    border-color: #d58512;
+}
+
+.fiveprayer-legacy-keys-notice .description {
+    color: #888;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+#fiveprayer-legacy-migration-result {
+    margin: 20px 0;
+}
+
+#fiveprayer-legacy-migration-result .fiveprayer-result.success ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+#fiveprayer-legacy-migration-result .fiveprayer-result.success li {
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+#fiveprayer-legacy-migration-result .fiveprayer-result.success code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+.fiveprayer-prefix-ok {
+    background: #d1fae5 !important;
+    color: #065f46;
+}
+
+.fiveprayer-prefix-warning {
+    background: #fff3cd !important;
+    color: #856404;
+}
+
+.fiveprayer-btn-copy-key-migrated {
+    border-color: #28a745;
+    color: #155724;
+    font-weight: 600;
+}
+
+.fiveprayer-btn-copy-key-migrated:hover {
+    background: #d1fae5;
+    border-color: #28a745;
+}
+
+@media (max-width: 600px) {
+    .fiveprayer-key-header {
+        flex-wrap: wrap;
+    }
+    .fiveprayer-key-header-actions {
+        flex-wrap: wrap;
+    }
+    .fiveprayer-detail-row {
+        flex-direction: column;
+    }
+    .fiveprayer-detail-row .fiveprayer-detail-label {
+        flex: none;
+        margin-bottom: 2px;
+    }
+    .fiveprayer-detail-modal-content {
+        max-height: 90vh;
+        margin: 3vh auto;
+        width: 98%;
+    }
+}
+
+.fiveprayer-field-caption strong {
+    display: inline;
+    color: #92400e;
+    font-weight: 600;
+}
+
+.fiveprayer-toggle-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e7eef5;
+    color: #0073aa;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: italic;
+    cursor: help;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.fiveprayer-toggle-hint:hover {
+    background: #cfe4f3;
+}
+
+/* ===== Form label (label + optional hint icon + optional required *) ===== */
+.fiveprayer-form-group label.fiveprayer-form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.fiveprayer-form-group label.fiveprayer-form-label > span:first-child {
+    font-weight: 600;
+    color: #23282d;
+}
+
+.fiveprayer-form-required {
+    color: #dc3545;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ===== Field caption (visible description under any form input) ===== */
+.fiveprayer-field-caption {
+    margin: 6px 0 0 0;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #555;
+}
+
+/* ===== API Security / Brute Force Page ===== */
+.fiveprayer-api-security .fiveprayer-api-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+    .fiveprayer-api-security .fiveprayer-api-grid {
+        grid-template-columns: 1fr 1.5fr;
+    }
+}
+
+.fiveprayer-api-security .fiveprayer-form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.fiveprayer-api-security .fiveprayer-form-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.fiveprayer-api-security .fiveprayer-form-group input[type="number"] {
+    max-width: 200px;
+}
+
+.fiveprayer-api-security .fiveprayer-form-group input[type="email"] {
+    max-width: 100%;
+}
+
+.fiveprayer-section-divider {
+    border: 0;
+    border-top: 1px solid #e0e0e0;
+    margin: 24px 0;
+}
+
+.fiveprayer-api-security h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.1em;
+    color: #23282d;
+}
+
+.fiveprayer-blocked-ips-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    margin-top: 16px;
+}
+
+.fiveprayer-blocked-ips-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #fff;
+}
+
+.fiveprayer-blocked-ips-table thead {
+    background: #f0f4f8;
+}
+
+.fiveprayer-blocked-ips-table th,
+.fiveprayer-blocked-ips-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.fiveprayer-blocked-ips-table th {
+    font-weight: 600;
+    color: #444;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.fiveprayer-blocked-ips-table tbody tr:hover {
+    background: #f7f9fc;
+}
+
+.fiveprayer-blocked-ips-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.fiveprayer-blocked-ips-table code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.fiveprayer-blocked-ips-table .fiveprayer-status {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.fiveprayer-blocked-ips-table .fiveprayer-unblock-ip,
+.fiveprayer-blocked-ips-table .fiveprayer-reset-cooldown-ip,
+.fiveprayer-blocked-ips-table .fiveprayer-expire-cooldown-ip {
+    padding: 4px 12px;
+    font-size: 12px;
+    width: auto;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .fiveprayer-blocked-ips-table th,
+    .fiveprayer-blocked-ips-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+}
+
+/* ===== Email Setup Guide (API Security) ===== */
+.fiveprayer-email-guide-section {
+    margin-bottom: 16px;
+}
+
+.fiveprayer-email-guide-section-last {
+    margin-top: 16px;
+}
+
+.fiveprayer-email-guide-section-top {
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.fiveprayer-email-guide-section:last-child,
+.fiveprayer-email-guide-section-top:last-child {
+    margin-bottom: 0;
+}
+
+.fiveprayer-email-guide-heading {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #23282d;
+}
+
+.fiveprayer-email-guide-text {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #444;
+}
+
+.fiveprayer-email-guide-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.fiveprayer-email-guide-list li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #444;
+}
+
+.fiveprayer-email-guide-list li:last-child {
+    margin-bottom: 0;
+}
+
+.fiveprayer-email-guide-list li strong {
+    color: #23282d;
+}
+
+.fiveprayer-email-guide-code {
+    display: block;
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    word-break: break-all;
+    color: #555;
+    margin: 8px 0;
+}
+
+.fiveprayer-email-guide-note {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #666;
+}
+
+.fiveprayer-email-guide-note em {
+    font-style: italic;
+    color: #888;
+}
+
+/* ===== Security Page Polish ===== */
+.fiveprayer-api-security .fiveprayer-form-group input[type="number"],
+.fiveprayer-api-security .fiveprayer-form-group input[type="email"] {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.fiveprayer-api-security .fiveprayer-form-group input[type="number"]:hover,
+.fiveprayer-api-security .fiveprayer-form-group input[type="email"]:hover {
+    border-color: #b0bcc9;
+}
+
+.fiveprayer-api-security .fiveprayer-btn-secondary {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.fiveprayer-api-security .fiveprayer-btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.fiveprayer-api-security .fiveprayer-btn-primary {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.fiveprayer-api-security .fiveprayer-btn-primary:hover {
+    background: #005a87;
+    transform: translateY(-1px);
+}
+
+/* ===== Result Notification Animation ===== */
+.fiveprayer-api-security .fiveprayer-result {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
+.fiveprayer-api-security .fiveprayer-result.success,
+.fiveprayer-api-security .fiveprayer-result.error {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fiveprayer-api-security .fiveprayer-result.success {
+    border-left: 4px solid #28a745;
+}
+
+.fiveprayer-api-security .fiveprayer-result.error {
+    border-left: 4px solid #dc3545;
+}
+
+/* ===== Security Page Responsive ===== */
+@media (max-width: 1024px) {
+    .fiveprayer-api-security .fiveprayer-api-card {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .fiveprayer-api-security .fiveprayer-form-group input[type="number"] {
+        max-width: 100%;
+    }
+    
+    .fiveprayer-api-security .fiveprayer-btn + .fiveprayer-btn {
+        margin-top: 8px;
+    }
+}
+
+/* ===== Subject Live Preview ===== */
+.fiveprayer-subject-preview {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f8f9fc;
+    border: 1px solid #e2e6ed;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.2s, opacity 0.2s;
+}
+
+.fiveprayer-subject-preview.is-empty {
+    opacity: 0.7;
+}
+
+.fiveprayer-subject-preview-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+.fiveprayer-subject-preview-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #6b7280;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.fiveprayer-subject-preview-value {
+    font-size: 13px;
+    color: #1a1a2e;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    word-break: break-word;
+}
+
+.fiveprayer-subject-preview.is-empty .fiveprayer-subject-preview-value {
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* ===== Guide Card (extra top margin for Email Setup Guide) ===== */
+.fiveprayer-guide-card {
+    margin-top: 20px;
+}
+
+/* ===== Reset Cooldown Button ===== */
+.fiveprayer-btn.fiveprayer-reset-cooldown-global {
+    padding: 7px 18px;
+    width: auto;
+    height: auto;
+    font-size: 13px;
+    border-width: 1px;
+    border-style: solid;
+    line-height: 1.4;
+}
+
+/* ===== Card Header with Button Row ===== */
+.fiveprayer-card-header-with-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.fiveprayer-card-header-with-btn h2 {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.fiveprayer-card-header-with-btn .fiveprayer-btn-sm {
+    flex-shrink: 0;
+}
+
+/* ===== Cooldown Level Badge ===== */
+.fiveprayer-cooldown-level-badge {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fff8e6;
+    border: 1px solid #f0d68a;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+}
+
+.fiveprayer-cooldown-level-label {
+    font-weight: 600;
+    color: #92400e;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.fiveprayer-cooldown-level-value {
+    font-weight: 700;
+    color: #78350f;
+    background: #fef3c7;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.fiveprayer-cooldown-next-duration {
+    color: #92400e;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* Note: "Paused (high volume)" label gets red styling from get_cooldown_level_info() */
+
+/* ===== Button Group (Save + Send Test, etc.) ===== */
+.fiveprayer-button-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .fiveprayer-button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .fiveprayer-button-group .fiveprayer-btn {
+        text-align: center;
+    }
+}
+
+/* ===== Cooldown Actions Button Group ===== */
+.fiveprayer-cooldown-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* ===== Page hero (matches the Settings page) ===== */
+.fiveprayer-api-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin: 16px 0 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.fiveprayer-api-hero-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #e7f3ff;
+    color: #2271b1;
+    flex-shrink: 0;
+}
+
+.fiveprayer-api-hero-icon .dashicons {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+}
+
+.fiveprayer-api-hero h1 {
+    margin: 0;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1.2;
+    color: #1d2327;
+}
+
+.fiveprayer-api-hero p {
+    margin: 4px 0 0;
+    color: #646970;
+    font-size: 13px;
+}
+
+.fiveprayer-api-admin .fiveprayer-api-header {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.fiveprayer-api-admin .fiveprayer-api-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.fiveprayer-api-admin .fiveprayer-api-card h2 {
+    font-size: 16px;
+}
+

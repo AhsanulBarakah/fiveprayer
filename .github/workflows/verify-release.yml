@@ -1,0 +1,117 @@
+name: Verify release
+
+# Proves the downloaded bundle — not the source tree — installs on a clean
+# WordPress: runs when the Release workflow finishes, or by hand for an existing
+# tag.
+#
+# `release: published` alone is not enough. The Release workflow publishes with
+# the repository's GITHUB_TOKEN, and GitHub never starts a run for an event that
+# token caused — that is the recursion guard, not a permission problem. The
+# first release on this repository was therefore published and never verified
+# until the check was dispatched by hand. `workflow_run` fires when the Release
+# workflow completes, whatever started it, which is the supported way to chain
+# the two.
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify (e.g. v3.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-release-${{ github.event.release.tag_name || github.event.inputs.tag || github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: Install the released zip on a fresh WordPress
+    # A Release run that failed published no bundle, so there is nothing to
+    # install.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fiveprayer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # Only github.* contexts are valid at job level; runner.temp is not, so
+      # each step sets WP_DIR="$RUNNER_TEMP/wp" for itself. A tag push reports
+      # the tag name as workflow_run.head_branch.
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag || github.event.workflow_run.head_branch }}
+    steps:
+      # No `ref:` on purpose: the assertions (fixtures, smoke test) come from
+      # the commit holding this workflow, while the bundle under test is
+      # downloaded from the release. Checking out the tag instead made every
+      # release tagged before a test was written impossible to verify.
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring, curl, dom, fileinfo, intl, json, openssl, simplexml, xml, zip
+          coverage: none
+
+      - name: Download the release bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/asset"
+          gh release download "$TAG" --pattern 'fiveprayer-*.zip' --dir "$RUNNER_TEMP/asset"
+          ls -lh "$RUNNER_TEMP/asset"
+          echo "--- archive root ---"
+          unzip -l "$RUNNER_TEMP"/asset/fiveprayer-*.zip | head -8
+
+      - name: Install WordPress
+        run: |
+          set -euo pipefail
+          WP_DIR="$RUNNER_TEMP/wp"
+          mkdir -p "$WP_DIR"
+          curl -fsSL https://wordpress.org/wordpress-6.7.tar.gz | tar -xz -C "$WP_DIR" --strip-components=1
+          cp tests/php/fixtures/wp-config.php "$WP_DIR/wp-config.php"
+          cp tests/php/fixtures/install-wordpress.php "$WP_DIR/install-wordpress.php"
+          cp tests/php/fixtures/activate-plugin.php "$WP_DIR/activate-plugin.php"
+          export FIVEPRAYER_DB_NAME=fiveprayer_test FIVEPRAYER_DB_USER=root \
+                 FIVEPRAYER_DB_PASSWORD=root FIVEPRAYER_DB_HOST=127.0.0.1
+          php "$WP_DIR/install-wordpress.php"
+
+      - name: Install the bundle into WordPress
+        run: |
+          set -euo pipefail
+          WP_DIR="$RUNNER_TEMP/wp"
+          rm -rf "$WP_DIR/wp-content/plugins/fiveprayer"
+          unzip -q "$RUNNER_TEMP"/asset/fiveprayer-*.zip -d "$WP_DIR/wp-content/plugins"
+          test -f "$WP_DIR/wp-content/plugins/fiveprayer/Fiveprayer.php"
+          php "$WP_DIR/activate-plugin.php"
+
+      - name: Smoke test the installed package
+        run: php tests/php/smoke-installed.php "$RUNNER_TEMP/wp"
+
+      - name: WordPress diagnostics
+        if: failure()
+        run: |
+          WP_DIR="$RUNNER_TEMP/wp"
+          if [ -f "$WP_DIR/wp-content/debug.log" ]; then
+            echo '--- wp-content/debug.log ---'
+            tail -n 100 "$WP_DIR/wp-content/debug.log"
+          fi
+          ls -R "$WP_DIR/wp-content/plugins/fiveprayer" | head -40 || true

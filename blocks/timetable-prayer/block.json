@@ -1,0 +1,33 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "fiveprayer/timetable-prayer",
+	"version": "0.1.0",
+	"title": "TimeTable Prayer",
+	"category": "fiveprayer-blocks",
+	"icon": "editor-table",
+	"description": "Displaying Monthly Timetable Prayer.",
+	"example": {},
+	"attributes": {
+		"printer_option": {
+			"type": "string",
+			"default": "outside"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": [ "full", "wide" ]
+	},
+	"textdomain": "fiveprayer",
+	"editorScript": "file:./index.js",
+	"editorStyle": [
+		"file:./index.css",
+		"fiveprayer-default-style"
+	],
+	"style": [
+		"file:./style-index.css",
+		"fiveprayer-default-style"
+	],
+	"render": "file:./render.php",
+	"viewScript": "file:./view.js"
+}

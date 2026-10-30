@@ -1,0 +1,62 @@
+.fiveprayer-settings-admin .debug { color: #0073aa; font-weight: bold; }
+.fiveprayer-settings-admin .info { color: #006799; font-weight: bold; }
+.fiveprayer-settings-admin .warning { color: #ff8700; font-weight: bold; }
+.fiveprayer-settings-admin .error { color: #dc3232; font-weight: bold; }
+.fiveprayer-settings-admin .log-table-container { width: 100%; overflow-x: auto; margin-top: 15px; border: 1px solid #ccd0d4; border-radius: 4px; }
+.fiveprayer-settings-admin .log-search-box { width: 350px; padding: 8px; }
+.fiveprayer-settings-admin .log-per-page-select { width: 150px; padding: 8px; }
+.fiveprayer-settings-admin .log-level-select { width: 150px; padding: 8px; }
+.fiveprayer-settings-admin .log-button { height: 30px !important; box-sizing: border-box !important; margin: 0 !important; }
+.fiveprayer-settings-admin .log-pagination { margin-top: 15px; text-align: center; }
+/* Style for the first option in dropdowns */
+.fiveprayer-settings-admin .log-per-page-select option[value="-1"],
+.fiveprayer-settings-admin .log-level-select option[value=""] {
+    font-style: italic;
+    color: #666;
+}
+.fiveprayer-settings-admin .log-page-link { padding: 5px 10px; margin: 0 2px; text-decoration: none; border: 1px solid #ccc; cursor: pointer; display: inline-block; }
+.fiveprayer-settings-admin .log-page-current { padding: 5px 10px; margin: 0 2px; background-color: #0073aa; color: white; border: 1px solid #0073aa; display: inline-block; }
+.fiveprayer-settings-admin .card {
+    position: relative;
+    margin-top: 20px;
+    padding: 0.7em 2em 1em;
+    min-width: 255px;
+    max-width: 100%;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    background: #fff;
+    box-sizing: border-box;
+}
+.fiveprayer-settings-admin .log-loading { text-align: center; padding: 20px; display: none; }
+.fiveprayer-settings-admin .log-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #0073aa; border-radius: 50%; width: 20px; height: 20px;    animation: fiveprayer-login-spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+@keyframes fiveprayer-login-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* Skeleton loading animation */
+@keyframes fiveprayer-skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.fiveprayer-settings-admin .skeleton-line {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: fiveprayer-skeleton-loading 1.5s infinite;
+}
+/* Override WordPress table styles for our log table */
+.fiveprayer-settings-admin #logs_table_container table { width: 100% !important; margin: 0 !important; border-collapse: collapse !important; }
+.fiveprayer-settings-admin #logs_table_container th { padding: 10px !important; background: #f6f7f7 !important; font-weight: bold !important; border: 1px solid #dcdcde !important; text-align: left !important; }
+.fiveprayer-settings-admin #logs_table_container td { padding: 10px !important; border: 1px solid #dcdcde !important; vertical-align: top !important; }
+.fiveprayer-settings-admin #logs_table_container tr:nth-child(even) { background-color: #f9f9f9 !important; }
+.fiveprayer-settings-admin #logs_table_container tbody tr:hover { background-color: #f0f0f1 !important; }
+.fiveprayer-settings-admin #logs_table_container table.wp-list-table { box-shadow: none !important; border: none !important; }
+.fiveprayer-settings-admin .log-occurrence-badge {
+    background: #0073aa;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    margin-left: 5px;
+    font-weight: bold;
+}

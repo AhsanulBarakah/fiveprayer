@@ -1,0 +1,134 @@
+===========================
+Release Notes (per release)
+===========================
+
+The GitHub release for a tag is built from this section, so keep it short and
+installer-facing. Everything technical belongs under the versioned changelog
+below. A version with no entry here falls back to GitHub's generated notes.
+
+= 3.0.0 =
+FivePrayer 3.0.0 is compatible with WordPress 7.2.
+
+* Feature Switches — turn each Configure Settings feature on or off.
+* Expanded Configure Settings: Unified Method, Rounding, Day-to-Day Smoothing and Calendar Type.
+* TV Display Mode (beta) for mosque screens, with safe-zone and layout width.
+* Share on Local Network, so a TV or phone on the same Wi-Fi can open the site.
+* Timetable Layout customizer, public REST API with key management, and up to six extra prayers.
+
+Upgrading from 2.4.x? Back up first; if anything looks wrong, use the reset option on the Settings page.
+
+Five Prayer — Changelog
+========================
+Read the full changelog online: https://fiveprayer.com/changelog
+
+= Unreleased =
+* NEW: The second ‘Asr column is translatable, and it is labelled for what it is — the Hanafi time. The monthly timetable (both layouts), the Vertical Today row and the `asr2` entry in the public REST API print “Hanafi”, and More → Translate → Prayer Names carries a Hanafi Asr field (Arabic: حنفي) so each language can give it its own wording. Existing installs gain the entry from the usual additive translation merge; the stored time itself does not change. An “Asr 2” entry left behind by an earlier build is no longer listed, and the next merge or save removes it.
+* NEW: Theme the tables with CSS variables — Documentation → Theme with CSS Variables lists every `--fiveprayer-…` property (row colours, highlight, borders, radius) with what it controls and its default, plus a copy-paste example. The properties stay declared on the plugin’s own containers, so an override only reaches the tables your rule matches.
+* NEW: Asr Calculation gains a combined entry — "Shafii, Maliki, Jafari, Hanbali and Hanafi (Asr + Hanafi)" is the 1 Mithl ‘Asr with the Hanafi school named alongside it, so a mosque that prints both ‘Asr times can pick one entry for both. Selecting it also switches the Hanafi column on, so Generate lands on a calendar that already carries both times. An install that already has the entry keeps it under the new label: the stored choice is renamed on the next admin load, so the dropdown does not go on showing the old wording. The short-lived per-school entries are removed again: installs that received them lose the extra rows, and a saved choice on one falls back to "Shafii, Maliki, Jafari and Hanbali" — the same 1 Mithl calculation, so no times change.
+* NEW: Second ‘Asr (2 Mithl / Hanafi) is generated — the optional Asr 2 column no longer depends on an imported printed chart. Generation stores the 2 Mithl time for every day; pick your school under Configure Settings → Asr Calculation and click Generate. Dates that already carry a second ‘Asr keep their stored values, and imported printed values still win where they exist. When the main ‘Asr already uses Hanafi (2 Mithl) the column stays empty, because both times are identical.
+* NEW: Asr 2 notice — with the column switched on and no stored second ‘Asr, the calendar explains why the column is empty and what to do about it instead of showing blank cells.
+* NEW: Asr 2 in the public REST API — `/prayer-times`, `/prayer-times/today` and every day of `/prayer-times/month` now carry `asr2` as a standard field directly after `asr`, so clients no longer need `?include_extras=true` (still accepted, but it no longer changes the payload). Days with no stored second ‘Asr omit the key.
+* NEW: Full-year London Unified import — paste the whole printed year (all 12 month sections, JANUARY through DECEMBER) into Configure Settings → Unified Method → Import a full-year timetable. Both the printed East London layout (with its Jamā‘ah columns) and the Date/Hijri layout are read, the 12-hour clock is converted to 24-hour automatically including the BST/GMT change days, and the pasted days are pinned to the printed minute instead of being approximated with angles. Two optional switches beside the button also bring the printed Jamā‘ah times into the Iqamah columns and the printed second ‘Asr into the Asr 2 column.
+* NEW: Asr 2 in more places — the Vertical Today table ([Fp_Vertical_Daily_Prayer]) has an optional Asr 2 row (Timetable Layout → Vertical Today → Hanafi, off by default), the single-prayer views gain [Fp_Single_Asr_2_Begins_time] plus a "Hanafi Begins Time" choice in the Single Prayer block, and the Elementor and Breakdance/Oxygen field lists show it as "Hanafi Begins Time (2 Mithl)" — the Elementor tag's own name is unchanged, so elements saved before the rename keep working. All of them read the stored second ‘Asr and stay blank when the day has none.
+* FIXED: The printer button prints the timetable and nothing else, on every theme — it used to hide the page and rely on the theme's print styles, which on some themes printed a blank sheet or put the theme's header and footer on the paper. The timetable now prints from its own frame that carries only the timetable and the plugin's styles, and the month table is given the paper width so the right-hand prayers are no longer clipped.
+* FIXED: Timetable row colours no longer lose to a theme's own table striping — themes that paint their odd table rows white turned the month timetable's and the daily/vertical tables' odd rows white behind their white text; the row colours now outrank the theme's rule.
+* FIXED: Printing drops the highlighted “today” row — the month timetable prints it with the same odd/even stripe as the rows around it, so the sheet no longer carries a solid block of highlight colour (and the screen still highlights today as before).
+* FIXED: The plugin's styles now belong to the plugin — its colours are `--fiveprayer-*` custom properties declared only on its own containers (never on `:root`), every front-end selector is namespaced under the full `fiveprayer` name (`fiveprayer-settings-admin`, `fiveprayer__highlight`, `fiveprayer__DairyPrayer_`), so no short `fp` prefix is left for another plugin or theme to share, and the page-wide print reset that hid the rest of a page is gone, so printing a page that contains a timetable no longer restyles or hides the theme around it. Custom CSS that targeted the old `.fp__highlight` or `.FP_DairyPrayer_` classes needs the new names. The printer button no longer takes its colours from the theme's palette.
+* IMPROVED: The monthly timetable resizes with the column it is placed in — the type, the cell padding and the header wrapping follow the container width instead of running past it, so a narrow page column no longer shows a timetable wider than itself. On very narrow screens the table keeps a readable type size and scrolls sideways inside its container instead of shrinking further.
+
+= 3.0.0 =
+* Compatible with WordPress 7.2 (Requires at least WordPress 6.7).
+* NEW: Feature Switches — a dedicated page under Customizing → Configure Settings with a master on/off switch for every Configure Settings feature. Turning a feature off hides its card (or dims it with an "Off" badge — your choice) and, for engine-backed features, disables the actual behaviour at generation. The panel warns when two enabled features do not work well together and never deletes saved values.
+* EXPANDED: Configure Settings — the calculation area now includes:
+   * Unified Method — exact custom criteria, seasonal/monthly switching, an exact published chart, and Jamā‘ah → Iqamah import.
+   * Rounding Method — Nearest / Up / Down / None with a configurable seconds threshold.
+   * Day-to-Day Smoothing — cap how much "Begins" times may change from one day to the next.
+   * Calendar Type — generate the full-year timetable by Gregorian or Hijri year.
+   * Advanced Schedules (beta) — moved here from More Settings; override prayer times for specific dates or date ranges.
+   * Next Prayer Countdown, Extra Prayers (up to six optional prayers) and Day Display — configured here; each is described in its own entry below.
+* NEW: Next Prayer Countdown — live time remaining until the next prayer, shown automatically in [Fp_Vertical_Daily_Prayer] and via [Fp_Single_Next_Prayer_Remaining]. Choose Long / Short / Clock format, optional seconds, and switch the "in" / "remaining" / "Now" words on or off. Off by default; the countdown is deliberately unstyled (.fiveprayer-next-prayer-countdown) so you can style it your way.
+* NEW: Extra Prayers — define up to six optional prayers (multiple Jumu‘ah congregations, Eid, Taraweeh, …) and place them with [Fp_Extra_Prayer_1] … [Fp_Extra_Prayer_6], with optional per-placement overrides.
+* NEW: Day Display — an optional Day column in the monthly timetable plus the weekday name and/or day-of-month number folded into the current-date line, in your chosen order.
+* NEW: TV Display Mode (beta) — turn one page or post into a full-screen digital-signage display for a mosque TV:
+   * Independent Pages and Posts switches for the "Enable TV Mode" box (opt-in per page/post; both off by default).
+   * Share on Local Network network switch so a TV, phone or tablet on the same Wi-Fi can open the site (nothing is rewritten on a public domain, and the database is never changed).
+   * Canvas Force and Safe Zone Guide editor-only design aids.
+   * TV type (Modern TV / Older TV with ~5% overscan) so the design stays inside the safe area.
+   * Layout width — Auto, a built-in width, or your own named sizes (up to 12) — settable per address (?fiveprayer_tv_width=), per page, or site-wide.
+   * ?fiveprayer_tv_report on-screen report, automatic theme-chrome hiding and spacing flush.
+   * Full guide under Documentation → TV Display Mode.
+* NEW: Timetable Layout customizer — under Customizing → Timetable Layout, design the Standard Timetable (Default vs Separate Hijri layout, column visibility) and the Vertical Today table, each with its own live preview and saved settings.
+* NEW: REST API — public endpoints under /wp-json/fiveprayer/v1/external/ for a health check, prayer times for a date, today, a full month, the next prayer and mosque info; plus API Management (create / revoke / regenerate / delete keys) and API Security (brute-force protection with email notifications).
+* IMPROVED: API Security — Cloudflare is detected automatically, so brute-force lockouts, per-key IP restrictions and the audit log record the visitor's address instead of the edge address with no configuration. Other proxies, load balancers and CDNs can be listed with the fiveprayer_trusted_proxy_ips filter; forwarding headers are only trusted from Cloudflare or those addresses. See Documentation → API Security → Proxies & Cloudflare.
+* NEW: Data Management & expanded Settings page — export, import and reset your prayer calculation settings, and manage translations.
+* IMPROVED: Custom Translation system — more editor sections (prayer names, begins/iqamah titles, timetable labels, vertical daily prayer, Hijri/Gregorian months and numbers, day names, extra info), import/export and reset.
+* IMPROVED: Page builder support — Elementor dynamic tags, Breakdance elements (Times, Countdown, Hijri Calendar, Schedule), Oxygen/Oxygen 6, and dynamic content placeholders.
+* IMPROVED: Gutenberg blocks — Container Prayer, Single Prayer and TimeTable Prayer.
+* IMPROVED: Enhanced Display Settings — hide printer button, hide month selection, custom URL button and auto-print page support (with [Fp_Printer_Button] and [Fp_Printer_Button_URL]).
+* IMPROVED: Next-prayer highlight now ships inside the combined JS/CSS bundle, so it works on any theme and any page builder; the default look is included and a full guide is under Documentation → Highlight Next Prayer.
+* IMPROVED: Admin UI — refreshed Categories/sidebar layout and quick-start Welcome screen.
+* Privacy: optional, opt-in anonymous usage telemetry. Nothing is transmitted until an administrator explicitly opts in, and no personal data is collected.
+* SHORTCODES — the complete active list: [Fp_TimeTable_Monthly] (with printer_option="outside" default or "inside"), [Fp_Vertical_Daily_Prayer], [Fp_Single_Next_Prayer_Remaining], [Fp_Extra_Prayer_1] … [Fp_Extra_Prayer_6], [Fp_Printer_Button], [Fp_Printer_Button_URL], [Fp_Single_CurrentDate], [Fp_Single_Hijra_Date], [Fp_Single_CurrentTime], and the per-prayer [Fp_Single_<Prayer>_Name], [Fp_Single_<Prayer>_Begins_time] and [Fp_Single_<Prayer>_Iqamah_time]. What each one renders is covered in the entry for its feature above.
+* DEPRECATED SHORTCODES — still functional and still parsed. [Fp_Single_<Prayer>_Begins] → [Fp_Single_<Prayer>_Begins_time] and [Fp_Single_<Prayer>_Iqamah] → [Fp_Single_<Prayer>_Iqamah_time] for Fajr, Dhuhr, Asr, Maghrib and Isha; [Fp_Single_Midnight_Begins] → [Fp_Single_Midnight_Begins_time], [Fp_Single_Sunrise_Begins] → [Fp_Single_Sunrise_Begins_time]. The older camel-case next-prayer tags [Fp_Single_NextPrayerIqamahTime], [Fp_Single_NextPrayerIqamahTitle], [Fp_Single_NextPrayerBeginsTime] and [Fp_Single_NextPrayerBeginsTitle] map to [Fp_Single_Next_Prayer_Iqamah_Time], [Fp_Single_Next_Prayer_Iqamah_Title], [Fp_Single_Next_Prayer_Begins_Time] and [Fp_Single_Next_Prayer_Begins_Title]. A Deprecated Shortcodes notice appears in the admin when any are in use; it can be dismissed for 14 days.
+* CACHING — works with major caching plugins and external object caches. The cache clears automatically when settings change, and clicking Generate Calendar rebuilds it.
+* REFERENCE — Full-year timetable: the year is generated in one pass and any month can be printed. Custom location: your own location and timezone (timezone comes from Settings → General). Hijri Calendar: multiple calculation options with an adjustable Ramadan start date. Iqama delay: each prayer's iqamah time, set as a delay from its begins time. Tune offsets: per-prayer minute offsets applied to the calculated times. Table Display Options: see 2.2.0.
+* Upgrading from v2.4? After upgrading, check that everything looks correct. If you notice any data issues, save a backup and then use the reset option — both are on the Settings page.
+
+= 2.4.0 =
+* NEW: Configure Settings — Found under Customizing > Configure Settings:
+   * Prayer Calculation Methods: Add/edit/delete methods (MWL, ISNA, Umm Al-Qura, or custom).
+   * Asr Calculation Methods: Standard (Shafii/Maliki/Hanbali) or Hanafi.
+   * Midnight Calculation Modes: Standard or Jafari.
+   * Higher Latitude Methods: For areas where sun may not set/rise normally.
+   * Flexible Input Format: Text fields accept degrees or minutes (e.g., "90 min").
+   * Info Tooltips: Hover over ℹ️ icons for explanations and common values.
+* NEW: Data Management Tab — Export, import, or reset settings.
+* Documentation: Added Configure Settings guide in Docs section.
+* NEW: Enhanced Display Settings — Hide Printer Timetable Button, Hide Month Selection, Custom URL Button for printer redirect, Auto-Print Page URL support.
+* New shortcodes: [Fp_Printer_Button] and [Fp_Printer_Button_URL].
+* Printer button redirect with dynamic month selection.
+* Theme-consistent button styling.
+* Removed debug logs for cleaner production code.
+
+= 2.3.0 =
+* Custom Prayer Schedule – set prayer times for specific dates or date ranges.
+* Page Builder Support – Elementor, Breakdance, Oxygen 6.
+* Performance Improvements – optimized database queries.
+* Print Layout Fix – spacing issues resolved.
+
+= 2.2.2 =
+* FIXED: Printer Screen CSS overwriting issue that was incorrectly changing table styles and layout in print view.
+* OPTIMIZED: Improved plugin performance through code refactoring and reduced database queries.
+* IMPROVED: Enhanced the existing caching system for better memory usage and scalability on high-traffic sites.
+* SECURITY: PHP error logging now only visible in development environment (WP_DEBUG mode).
+
+= 2.2.1 =
+* Fixed: Compatibility issues with various page builders.
+* Improved: Added CurrentTime placeholder for easier styling.
+
+= 2.2.0 =
+* Added: Table Display Options — control which columns appear in prayer timetable displays (skip Iqamah & Midnight columns). Found in More Settings → Display Settings.
+* Fixed: Timezone Handling — calendar generation now uses the timezone set in WordPress General Settings.
+* Fixed: Current Time Display — visitors now see the current time based on the WordPress-configured timezone.
+
+= 2.1.1 =
+* Compatible with WordPress 6.9.
+* Fixed: TimeTable One of The Columns not Translated.
+* Fixed: Layout of the TimeTable in The PrinterPage.
+* Improved: UI For Texts in the Admin.
+
+= 2.1.0 =
+* Added new prayer names shortcodes and more.
+* Introduced Gutenberg blocks (including Container Prayer).
+* Implemented Custom Translation system.
+* Improved shortcode consistency.
+* Removed: Clean Transients Sub Menu to simplify the codebase and improve performance.
+* Added: Settings Sub Menu page — manage translations, import/export custom translations, and reset behavior.
+
+= 2.0.1 =
+* Compatible with WordPress 6.8.1.
+* Added Facebook Community Group Link.
+
+= 2.0.0 =
+* Major Update – Breaking Change release of Version 2.0.0.
+* Initial release of Version 2.0.0.

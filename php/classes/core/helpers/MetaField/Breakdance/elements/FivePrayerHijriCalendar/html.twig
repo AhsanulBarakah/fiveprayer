@@ -1,0 +1,40 @@
+<div class="{{ '%%CLASSES%%' }}" {{ '%%ATTRIBUTES%%' }} {{ '%%PSEUDO_SELECTOR_CLASSES%%' }}>
+    <div class="fiveprayer-hijri-calendar-container">
+        <div class="calendar-header">
+            <h3>Hijri Calendar{% if properties.content.calendar_settings.show_current_month %} - January 2026{% endif %}</h3>
+        </div>
+        
+        <div class="calendar-grid">
+            <div class="day-name">Sun</div>
+            <div class="day-name">Mon</div>
+            <div class="day-name">Tue</div>
+            <div class="day-name">Wed</div>
+            <div class="day-name">Thu</div>
+            <div class="day-name">Fri</div>
+            <div class="day-name">Sat</div>
+            
+            <!-- Empty cells for the start of the month -->
+            <div class="calendar-cell empty"></div>
+            <div class="calendar-cell empty"></div>
+            <div class="calendar-cell empty"></div>
+            
+            <!-- Actual dates -->
+            {% for day in 1..31 %}
+            <div class="calendar-cell {% if day == 16 %}today-highlight{% endif %}">
+                <div class="gregorian-date">{% if properties.content.calendar_settings.show_gregorian_date %}{{ day }}{% endif %}</div>
+                <div class="hijri-date">{% if properties.content.calendar_settings.show_hijri_date %}{{ day + 10 }}{% endif %} <span class="hijri-month">Jum.I</span></div>
+                {% if properties.content.calendar_settings.show_prayer_times %}
+                <div class="prayer-indicator">F: 05:30</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="calendar-info">
+            <p><strong>Today:</strong> 16 January 2026 | 26 Jumada al-Awwal 1447</p>
+            {% if properties.content.calendar_settings.show_prayer_times %}
+            <p><strong>Next Prayer:</strong> Dhuhr at 13:15</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

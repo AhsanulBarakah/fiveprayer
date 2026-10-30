@@ -1,0 +1,13 @@
+# Code owners for the FivePrayer repository.
+#
+# Only accounts with write access can be code owners: GitHub ignores a pattern
+# whose owners lack it. @AhsanulBarakah owns this repository, so the rule below
+# applies. @jamaaldev is not a collaborator here yet — naming them would
+# silently not apply — so add them to the second line once they are invited
+# (Settings → Collaborators and teams) and the invite is accepted.
+
+# Everything in the repository.
+* @AhsanulBarakah
+
+# Everything, once @jamaaldev has write access — both owners, both reviews.
+# * @AhsanulBarakah @jamaaldev

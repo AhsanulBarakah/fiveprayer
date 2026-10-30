@@ -1,0 +1,7 @@
+[
+  {
+    "file": "php/classes/core/Assets/Traits/ESIContentGeneratorTrait.php",
+    "rule": "decode-request-data",
+    "reason": "The `atts` argument is base64-encoded to keep the ESI query string short, not to hide it: the nonce is verified before this line, the value is read through get_sanitized_get_input(), and the decoded JSON is only used as shortcode attributes."
+  }
+]

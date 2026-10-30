@@ -1,0 +1,75 @@
+.fiveprayer-countdown-container .fiveprayer-countdown-element {
+    padding: 20px;
+    text-align: center;
+}
+
+.fiveprayer-countdown-container .countdown-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.2em;
+    color: #333;
+}
+
+.fiveprayer-countdown-container .countdown-display {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.fiveprayer-countdown-container .countdown-display.blocks .countdown-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: {{ properties.design.countdown_style.block_width ? properties.design.countdown_style.block_width ~ 'px' : '60px' }};
+    min-height: {{ properties.design.countdown_style.block_height ? properties.design.countdown_style.block_height ~ 'px' : '60px' }};
+    background-color: {{ properties.design.countdown_style.background_color ? properties.design.countdown_style.background_color : '#f0f0f0' }};
+    border-radius: {{ properties.design.countdown_style.border_radius ? properties.design.countdown_style.border_radius ~ 'px' : '5px' }};
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.fiveprayer-countdown-container .countdown-display.inline .countdown-unit {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: {{ properties.design.countdown_style.block_width ? properties.design.countdown_style.block_width ~ 'px' : '60px' }};
+    min-height: {{ properties.design.countdown_style.block_height ? properties.design.countdown_style.block_height ~ 'px' : '60px' }};
+    background-color: {{ properties.design.countdown_style.background_color ? properties.design.countdown_style.background_color : '#f0f0f0' }};
+    border-radius: {{ properties.design.countdown_style.border_radius ? properties.design.countdown_style.border_radius ~ 'px' : '5px' }};
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.fiveprayer-countdown-container .countdown-display.circular .countdown-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: {{ properties.design.countdown_style.block_width ? properties.design.countdown_style.block_width ~ 'px' : '60px' }};
+    height: {{ properties.design.countdown_style.block_height ? properties.design.countdown_style.block_height ~ 'px' : '60px' }};
+    background-color: {{ properties.design.countdown_style.background_color ? properties.design.countdown_style.background_color : '#f0f0f0' }};
+    border-radius: 50%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.fiveprayer-countdown-container .countdown-number {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: {{ properties.design.countdown_style.time_color ? properties.design.countdown_style.time_color : '#333' }};
+    line-height: 1;
+}
+
+.fiveprayer-countdown-container .countdown-label {
+    font-size: 0.7em;
+    color: {{ properties.design.countdown_style.label_color ? properties.design.countdown_style.label_color : '#666' }};
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.fiveprayer-countdown-container .countdown-message {
+    font-weight: bold;
+    color: #d63638;
+    padding: 10px;
+    border: 1px dashed #d63638;
+    border-radius: 5px;
+}

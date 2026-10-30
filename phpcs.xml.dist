@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<!--
+  Code standards for the shipped plugin.
+
+  The full WordPress-Extra standard reports ~75,000 violations on this
+  codebase, almost all cosmetic (alignment, Yoda conditions, comment
+  punctuation). Freezing that in a baseline would make every future violation
+  invisible, so this gate covers the sniffs whose violations are security bugs
+  instead: unescaped output, unsanitised input, missing nonce checks, SQL built
+  without $wpdb->prepare() and prefix collisions in the global namespace.
+
+  Run `composer lint:php`. Widen the ruleset once the cosmetic debt is paid
+  down; do not add a baseline here.
+-->
+<ruleset name="FivePrayer">
+	<description>Security sniffs for the FivePrayer plugin.</description>
+
+	<file>php</file>
+	<file>Fiveprayer.php</file>
+	<file>index.php</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/build-admin/*</exclude-pattern>
+	<exclude-pattern>*/build-blocks/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg value="p"/>
+	<arg name="parallel" value="4"/>
+
+	<config name="minimum_supported_wp_version" value="6.7"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<!-- Escaping, sanitisation, nonces, capabilities, file uploads. -->
+	<rule ref="WordPress.Security"/>
+
+	<!-- SQL built without $wpdb->prepare(). -->
+	<rule ref="WordPress.DB.PreparedSQL"/>
+
+	<!-- Globals and options must stay in the plugin's namespace. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="fiveprayer"/>
+				<element value="FivePrayer"/>
+				<element value="Fiveprayer"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

@@ -1,0 +1,214 @@
+/**
+ * iFiiri client SDK styles: the opt-in modal and the deactivation modal.
+ *
+ * Scoped with .ifiiri- prefixed classes and a fixed overlay, so it cannot collide
+ * with the host plugin's own admin styling.
+ *
+ * @package iFiiri\SDK
+ */
+
+.ifiiri-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background: rgba(12, 19, 36, 0.55);
+	backdrop-filter: blur(2px);
+	animation: ifiiri-fade-in 0.15s ease-out;
+}
+
+@keyframes ifiiri-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+.ifiiri-modal__panel {
+	width: 100%;
+	max-width: 660px;
+	max-height: 88vh;
+	overflow: auto;
+	box-sizing: border-box;
+	padding: 26px 28px;
+	background: #fff;
+	border-radius: 16px;
+	box-shadow: 0 24px 60px -20px rgba(8, 14, 30, 0.55);
+	color: #16223c;
+	font-size: 14px;
+	line-height: 1.55;
+	animation: ifiiri-rise 0.18s ease-out;
+}
+
+@keyframes ifiiri-rise {
+	from {
+		transform: translateY(8px);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.ifiiri-modal__title {
+	margin: 0 0 8px;
+	font-size: 20px;
+	font-weight: 650;
+	line-height: 1.25;
+}
+
+.ifiiri-modal__lede {
+	margin: 0 0 18px;
+	color: #5b6883;
+}
+
+.ifiiri-modal__columns {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.ifiiri-modal__column {
+	padding: 14px 16px;
+	border-radius: 12px;
+	border: 1px solid #e3e8f0;
+	background: #fbfcfe;
+}
+
+.ifiiri-modal__column--sent {
+	border-color: #c9dbff;
+	background: #f5f9ff;
+}
+
+.ifiiri-modal__column--never {
+	border-color: #d8f0e3;
+	background: #f6fdf9;
+}
+
+.ifiiri-modal__column h3 {
+	margin: 0 0 8px;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #5b6883;
+}
+
+.ifiiri-modal__column ul {
+	margin: 0;
+	padding-left: 18px;
+}
+
+.ifiiri-modal__column li {
+	margin-bottom: 4px;
+}
+
+.ifiiri-modal__note {
+	margin: 14px 0 0;
+	font-size: 12.5px;
+	color: #6b7891;
+}
+
+.ifiiri-modal__note--warning {
+	margin: 12px 0 0;
+	padding: 10px 12px;
+	border-left: 3px solid #dba617;
+	border-radius: 3px;
+	background: #fcf9e8;
+	color: #614a0c;
+}
+
+.ifiiri-modal__actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-top: 18px;
+}
+
+.ifiiri-modal__state {
+	display: inline-block;
+	margin: 10px 0 0;
+	font-size: 13px;
+	color: #128a51;
+}
+
+.ifiiri-modal__state.is-error {
+	color: #c0392b;
+}
+
+/* Feedback form inside the deactivation modal. */
+
+.ifiiri-reason-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-bottom: 14px;
+	border: 1px solid #e3e8f0;
+	border-radius: 12px;
+	padding: 8px;
+	background: #fbfcfe;
+}
+
+.ifiiri-reason-list label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.ifiiri-reason-list label:hover {
+	background: #eef3ff;
+}
+
+.ifiiri-feedback-wrap {
+	margin-bottom: 14px;
+}
+
+.ifiiri-feedback-label {
+	display: block;
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.ifiiri-feedback-wrap textarea {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #e3e8f0;
+	border-radius: 10px;
+	box-sizing: border-box;
+	font-size: 13px;
+	resize: vertical;
+}
+
+.ifiiri-feedback-wrap textarea:focus {
+	border-color: #2f6bff;
+	box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.15);
+	outline: none;
+}
+
+/* The slim, persistent consent notice on later page loads. */
+
+.ifiiri-notice .ifiiri-modal__state {
+	margin-left: 10px;
+}
+
+@media screen and (max-width: 600px) {
+	.ifiiri-modal {
+		padding: 12px;
+	}
+
+	.ifiiri-modal__panel {
+		padding: 20px;
+	}
+}

@@ -1,0 +1,243 @@
+name: Checks
+
+# Mirrors .githooks/pre-commit, plus the production build that is too slow to
+# run on every local commit.
+on:
+  push:
+    branches:
+      - main
+      - fiveprayerv3-tailwindv4
+      - fiveprayer-v3-release
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: PHP syntax
+        run: |
+          find php Fiveprayer.php index.php -name '*.php' -print0 2>/dev/null \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Build (includes the typecheck)
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: TV display harness
+        run: npm run test:js
+
+      # The build runs the typecheck first, so a failure in this job is a type
+      # error, a failing unit test or the TV harness. Re-run the three checks
+      # (they take seconds) and keep only the error lines, which GitHub lists
+      # as annotations instead of leaving them buried in the build log.
+      - name: Failing checks
+        if: failure()
+        run: |
+          set +e
+          npx tsc --noEmit 2>&1 | grep -E 'error TS' | sed 's/^/::error::/'
+          npx vitest run 2>&1 | grep -E 'FAIL|AssertionError' | sed 's/^/::error::/'
+          npm run test:js 2>&1 | grep -E '^FAIL' | sed 's/^/::error::/'
+          exit 0
+
+  php-tests:
+    name: PHP integration tests
+    runs-on: ubuntu-latest
+    # The suites need about a minute. A hung service container once held this
+    # job in "Initialize containers" for half an hour, so cap it instead of
+    # letting it sit until GitHub's six-hour default.
+    timeout-minutes: 20
+    # The tests bootstrap a real WordPress (they call wp-load.php and exercise
+    # the REST/capability layer), so the job installs one instead of stubbing it.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fiveprayer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring, curl, dom, fileinfo, intl, json, openssl, simplexml, xml, zip
+          coverage: none
+
+      - name: Cache WordPress core
+        uses: actions/cache@v4
+        with:
+          path: ~/.wp-cli/cache
+          key: wp-cli-cache-${{ runner.os }}-6.7
+
+      - name: Install WordPress
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set -euo pipefail
+          curl -sSLO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+          mkdir -p "$WP_DIR"
+          cd "$WP_DIR"
+          wp core download --version=6.7 --quiet
+          wp config create --dbname=fiveprayer_test --dbuser=root --dbpass=root \
+            --dbhost=127.0.0.1 --quiet
+          wp core install --url=http://example.test --title=FivePrayer \
+            --admin_user=admin --admin_password=admin --admin_email=dev@example.test \
+            --skip-email --quiet
+
+          # Copy rather than symlink: the tests resolve wp-load.php with
+          # dirname(__DIR__, 5), which must land on the WordPress root.
+          rsync -a --exclude .git --exclude node_modules --exclude vendor \
+            "$GITHUB_WORKSPACE/" wp-content/plugins/fiveprayer/
+          composer install --no-interaction --no-progress \
+            --working-dir=wp-content/plugins/fiveprayer
+          wp plugin activate fiveprayer
+
+      - name: Security hardening checks
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: php "$WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-security-hardening.php"
+
+      - name: CSS scoping checks
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: php "$WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-css-scoping.php"
+
+      - name: Timetable month checks
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: php "$WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-timetable-month.php"
+
+      - name: Asr list and second 'Asr checks
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: php "$WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-asr-second.php"
+
+      - name: Hanafi translation checks
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: php "$WP_DIR/wp-content/plugins/fiveprayer/tests/php/test-asr2-translation.php"
+
+      # What the failure email is read for: the checks that failed, not the
+      # whole suite log. Re-running the suites (they take seconds) and keeping
+      # only the FAIL lines as annotations puts them in the run summary.
+      - name: Failing checks
+        if: failure()
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          set +e
+          plugin="$WP_DIR/wp-content/plugins/fiveprayer"
+          [ -d "$plugin/tests/php" ] || exit 0
+          for file in "$plugin"/tests/php/test-*.php; do
+            [ -f "$file" ] || continue
+            php "$file" 2>&1 | grep -E '^(FAIL|FAILED)' | sed 's/^/::error::/'
+          done
+          exit 0
+
+      # When a suite fails there is no other way to see why: the test output is
+      # the only thing in the log, and WordPress swallows fatals into debug.log.
+      - name: WordPress diagnostics
+        if: failure()
+        env:
+          WP_DIR: ${{ runner.temp }}/wp
+        run: |
+          cd "$WP_DIR" || exit 0
+          wp --info || true
+          wp plugin list || true
+          if [ -f wp-content/debug.log ]; then
+            echo '--- wp-content/debug.log ---'
+            tail -n 100 wp-content/debug.log
+          fi
+
+  # The wp-cli-free installer (tests/php/fixtures + tools/php-suite.sh), so the
+  # path the PHPUnit job installs through cannot rot. It installs and stops:
+  # running the five suites again here repeated every assertion php-tests had
+  # already made, which cost a full job per push and caught nothing new. The
+  # installer is its own check — tools/php-suite.sh runs under `set -euo
+  # pipefail`, so a WordPress download, install or activation failure fails the
+  # job without a suite being run.
+  php-tests-fixture:
+    name: Fixture installer (no wp-cli)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fiveprayer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, mbstring, curl, dom, fileinfo, intl, json, openssl, simplexml, xml, zip
+          coverage: none
+
+      - name: Cache the WordPress tarball
+        uses: actions/cache@v4
+        with:
+          path: ~/.wp-cache
+          key: wp-tarball-${{ runner.os }}-6.7
+
+      - name: Install WordPress and activate the plugin
+        env:
+          FIVEPRAYER_DB_NAME: fiveprayer_test
+          FIVEPRAYER_DB_USER: root
+          FIVEPRAYER_DB_PASSWORD: root
+          FIVEPRAYER_DB_HOST: 127.0.0.1
+          FIVEPRAYER_WP_DIR: ${{ runner.temp }}/wp-fixture
+          # The suites belong to the php-tests and PHPUnit jobs; this one proves
+          # the fixture installer works.
+          FIVEPRAYER_SKIP_SUITES: '1'
+        run: bash tools/php-suite.sh
+
+      - name: WordPress diagnostics
+        if: failure()
+        env:
+          WP_DIR: ${{ runner.temp }}/wp-fixture
+        run: |
+          if [ -f "$WP_DIR/wp-content/debug.log" ]; then
+            echo '--- wp-content/debug.log ---'
+            tail -n 100 "$WP_DIR/wp-content/debug.log"
+          fi

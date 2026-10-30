@@ -1,0 +1,39 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "FivePrayer live preview",
+    "description": "Installs FivePrayer from the GitHub release, activates it and opens its settings screen.",
+    "author": "AhsanulBarakah",
+    "categories": ["prayer", "islamic", "utilities"]
+  },
+  "landingPage": "/wp-admin/admin.php?page=fiveprayer",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "login",
+      "username": "admin"
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://github.com/AhsanulBarakah/fiveprayer/releases/download/v3.0.0/fiveprayer-v3.0.0.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "FivePrayer preview"
+      }
+    }
+  ]
+}

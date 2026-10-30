@@ -1,0 +1,120 @@
+name: Release
+
+# Publishing a release: push a version tag (v3.0.0) or run this by hand against
+# an existing tag. The job builds the plugin, packages the shipped bundle and
+# attaches it to the release; GitHub adds the source archives itself.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (must already exist, e.g. v3.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, package and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # vendor/ is gitignored but ships inside the bundle, so the release build
+      # must generate it — production-only, no dev dependencies.
+      - name: Install production PHP dependencies
+        run: composer install --no-dev --no-interaction --no-progress
+
+      - name: Resolve and check the tag
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "Tag $TAG does not match package.json version v$VERSION." >&2
+            echo "Bump the version (package.json, README stable tag, changelog.txt) first." >&2
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      # The short, installer-facing section at the top of changelog.txt, not the
+      # full technical history and not GitHub's commit-by-commit notes.
+      - name: Prepare release notes
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          awk -v heading="= $VERSION =" '
+            $0 == heading { capture = 1; next }
+            capture && /^= .* =$/ { exit }
+            capture && /^Five Prayer — Changelog/ { exit }
+            capture { print }
+          ' changelog.txt > release-notes.md
+          if [ -s release-notes.md ]; then
+            echo "NOTES_FILE=release-notes.md" >> "$GITHUB_ENV"
+          else
+            echo "No release notes for $VERSION in changelog.txt — GitHub will generate them."
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Package the plugin
+        run: npm run plugin:zip
+
+      - name: Name the asset
+        run: |
+          set -euo pipefail
+          mv fiveprayer.zip "fiveprayer-$TAG.zip"
+          echo "ASSET=fiveprayer-$TAG.zip" >> "$GITHUB_ENV"
+          ls -lh "fiveprayer-$TAG.zip"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOTES_ARGS=()
+          if [ -n "${NOTES_FILE:-}" ]; then
+            NOTES_ARGS=(--notes-file "$NOTES_FILE")
+          else
+            NOTES_ARGS=(--generate-notes)
+          fi
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # Re-running for an existing release replaces the asset instead of
+            # failing, so a fixed build can be re-published.
+            gh release upload "$TAG" "$ASSET" --clobber
+            gh release edit "$TAG" "${NOTES_ARGS[@]}"
+          else
+            gh release create "$TAG" "$ASSET" \
+              --title "FivePrayer $TAG" \
+              --verify-tag \
+              "${NOTES_ARGS[@]}"
+          fi

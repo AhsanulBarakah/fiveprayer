@@ -1,0 +1,332 @@
+/**
+ * FivePrayer - TV Display Mode (front end)
+ *
+ * Only enqueued on a page where "TV Display Mode" is enabled, i.e. when the
+ * <body> carries the `fiveprayer-tv-active` class. Every rule below is scoped
+ * to that class (or to a class this feature's own script adds) so no other page
+ * on the site is affected.
+ *
+ * Responsibilities:
+ *  1. Lock the viewport to exactly 100vw x 100vh with no scrollbars.
+ *  2. Hide theme chrome (site header, footer, sidebars, navigation, admin bar).
+ *  3. Strip the theme's own wrapper spacing (margins, paddings, borders around
+ *     the content, never inside it).
+ *  3b. Flush the top of the canvas: zero the *top* edge of the wrappers above
+ *     the content, and hide the leading empties a block theme leaves where its
+ *     hidden page title was (never anything the page builder created).
+ *  4. Prepare the content wrapper ("stage") for the JS scaling engine.
+ *  5. Hold the canvas invisible until the engine has positioned it.
+ *
+ * What this file deliberately does NOT do:
+ *  6. It never rewrites the layout the theme or the page builder produced. No
+ *     width, max-width, display or background is overridden anywhere, and no
+ *     spacing *inside* the content is touched — only the wrappers around it are
+ *     cleaned and the page as a whole is scaled. See the note in section 3
+ *     before adding any rule that touches those.
+ *
+ * The `transform: scale(...)`, the frozen stage width and the scroll lock are
+ * applied by tv-display.js, which also lifts the theme's `max-width` cap on the
+ * stage while the editor canvas is locked (Canvas Force) — the screen then shows
+ * the design at the width the canvas gave it, which no rule here could do
+ * without touching the design's own boxes. See section 3.
+ */
+
+/* -------------------------------------------------------------------------
+ * 1. Viewport lock
+ *
+ * Driven by `fiveprayer-tv-scroll-lock`, the class tv-display.js adds once it
+ * has positioned the canvas. Keeping the lock script-driven means a visitor
+ * with scripts disabled can never end up with a page taller than the screen
+ * that cannot be scrolled — without JavaScript the rules below never apply at
+ * all. The black canvas colour sits on <html> and nowhere else, so a background
+ * the page itself sets on <body> (theme or page builder) still paints: the
+ * designed colours survive and the letterboxing behind them is black.
+ * ---------------------------------------------------------------------- */
+
+html.fiveprayer-tv-js,
+html.fiveprayer-tv-scroll-lock {
+	background: #000;
+}
+
+html.fiveprayer-tv-scroll-lock,
+html.fiveprayer-tv-scroll-lock body.fiveprayer-tv-active {
+	width: 100vw;
+	height: 100vh;
+	max-width: 100vw;
+	max-height: 100vh;
+	margin: 0 !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+}
+
+/* WordPress adds a top offset for the admin bar on <html>; remove it here so
+   the signage canvas is flush with the top of the screen. */
+html.fiveprayer-tv-scroll-lock {
+	margin-top: 0 !important;
+}
+
+/* -------------------------------------------------------------------------
+ * 2. Theme chrome reset
+ *
+ * Two layers, because chrome lives in two places:
+ *
+ *  a) TV mode's own script labels every sibling of the chain that leads to the
+ *     content wrapper with `.fiveprayer-tv-hide` (see `hideChrome()` in
+ *     tv-display.js). That is the layer that actually removes the header, the
+ *     footer, sidebars, breadcrumbs, the page title and any floating widget
+ *     from another plugin, on any theme, without knowing a single theme class
+ *     name. It is a class rule, so it also lets a user hide one more element by
+ *     hand with the documented class.
+ *  b) The named containers below, so the common cases are also covered with
+ *     JavaScript unavailable and so a block theme's header/footer — which sit
+ *     *inside* the content wrapper, where layer (a) deliberately never reaches —
+ *     are removed as well.
+ *
+ * Never hide arbitrary <header>/<footer> tags: a page builder may have placed
+ * one inside the page content, and that is the user's design, not chrome.
+ * ---------------------------------------------------------------------- */
+
+/* Layer (a): whatever tv-display.js marked, plus anything the user marked. */
+body.fiveprayer-tv-active .fiveprayer-tv-hide,
+
+/* Layer (b): classic and hybrid theme chrome. */
+body.fiveprayer-tv-active > header,
+body.fiveprayer-tv-active > footer,
+body.fiveprayer-tv-active > #header,
+body.fiveprayer-tv-active > #footer,
+body.fiveprayer-tv-active #masthead,
+body.fiveprayer-tv-active #colophon,
+body.fiveprayer-tv-active .site-header,
+body.fiveprayer-tv-active .site-footer,
+body.fiveprayer-tv-active .site-navigation,
+body.fiveprayer-tv-active .main-navigation,
+body.fiveprayer-tv-active #secondary,
+body.fiveprayer-tv-active .widget-area,
+body.fiveprayer-tv-active #footer-widgets,
+body.fiveprayer-tv-active .skip-link,
+body.fiveprayer-tv-active #wpadminbar,
+
+/* Theme builder headers/footers: Elementor Pro, Divi, Beaver Themer, Avada. */
+body.fiveprayer-tv-active .elementor-location-header,
+body.fiveprayer-tv-active .elementor-location-footer,
+body.fiveprayer-tv-active #main-header,
+body.fiveprayer-tv-active #main-footer,
+body.fiveprayer-tv-active .et-l--header,
+body.fiveprayer-tv-active .et-l--footer,
+body.fiveprayer-tv-active .fl-theme-builder-header,
+body.fiveprayer-tv-active .fl-theme-builder-footer,
+body.fiveprayer-tv-active .fusion-header-wrapper,
+body.fiveprayer-tv-active .fusion-footer,
+
+/* Block themes: header/footer template parts and the title block live inside
+   the content wrapper, so they need naming. Tag-qualified on purpose — the
+   main template part is a <div>/<main>, never a <header>/<footer>. */
+body.fiveprayer-tv-active header.wp-block-template-part,
+body.fiveprayer-tv-active footer.wp-block-template-part,
+body.fiveprayer-tv-active .wp-site-blocks > header,
+body.fiveprayer-tv-active .wp-site-blocks > footer,
+
+/* The theme's automatic page title. A title you placed yourself in a builder is
+   a heading of its own (.elementor-heading-title, .wp-block-heading, …) and is
+   left alone. */
+body.fiveprayer-tv-active .entry-header,
+body.fiveprayer-tv-active .entry-title,
+body.fiveprayer-tv-active .page-header,
+body.fiveprayer-tv-active .page-title,
+body.fiveprayer-tv-active .wp-block-post-title {
+	display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+ * 2b. Theme wrapper spacing
+ *
+ * A theme wraps the content in its own boxes — `#page`, `.site-content`,
+ * `.site-main`, `.container`, `.entry-content` — and gives them margins,
+ * padding and borders the page builder never designed. On a normal page that
+ * spacing is welcome; on a signage screen it is empty bands around the design,
+ * and it also inflates the box the scaling engine measures.
+ *
+ * tv-display.js labels the stage and every ancestor up to <body> with
+ * `.fiveprayer-tv-clean`, and only margin, padding and border are zeroed here.
+ * Width, max-width and display are deliberately left alone: the boxed content
+ * width a theme (or Gutenberg's `contentSize`) sets is part of the layout, and
+ * changing it would resize the design instead of just cleaning around it.
+ *
+ * The walk stops at the content wrapper, so the spacing *you* set in the page
+ * builder or in Gutenberg — block gaps, group padding, section margins — is
+ * untouched. If you miss the theme's spacing on the TV screen, put it back for
+ * the element you want (custom CSS prints after this file):
+ *
+ *   body.fiveprayer-tv-active .fiveprayer-tv-clean { padding: 40px !important; }
+ * ---------------------------------------------------------------------- */
+
+body.fiveprayer-tv-active .fiveprayer-tv-clean {
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+}
+
+/* -------------------------------------------------------------------------
+ * 2c. Empty band above the content
+ *
+ * A block theme prints the page title **inside** the content wrapper, with
+ * Gutenberg spacer blocks around it, and gives `main` and the post-content
+ * wrapper a top margin. Hiding that title (section 2) therefore leaves its
+ * spacers and those margins behind as an empty band at the top of the screen —
+ * and section 2b cannot remove it, because that pass deliberately stops at the
+ * content wrapper.
+ *
+ * tv-display.js marks exactly two things, and only outside your content
+ * (see `trimLeadingSpace()`):
+ *
+ *  - `.fiveprayer-tv-trim` — the content wrapper and every wrapper above it up
+ *    to the stage. Only the TOP side is zeroed, so left, right and bottom
+ *    spacing, section paddings and block gaps are untouched.
+ *  - `.fiveprayer-tv-trim-hide` — leading subtrees that hold no visible text and
+ *    paint nothing: the spacer blocks and the group that only framed the hidden
+ *    title. A leading box that paints (a coloured bar, a divider, a background
+ *    image) is kept, and the scan stops at the content wrapper, so a spacer
+ *    block you placed inside the page yourself is kept as well.
+ *
+ * Want a top inset back on a display page? One line in
+ * Appearance → Customize → Additional CSS (custom CSS prints after this file):
+ *
+ *   body.fiveprayer-tv-active .fiveprayer-tv-trim { padding-top: 40px !important; }
+ * ---------------------------------------------------------------------- */
+
+body.fiveprayer-tv-active .fiveprayer-tv-trim {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+	border-top-width: 0 !important;
+}
+
+body.fiveprayer-tv-active .fiveprayer-tv-trim-hide {
+	display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+ * 3. The page's own layout is never rewritten
+ *
+ * Earlier versions reset `width / max-width / margin / padding` on the generic
+ * containers almost every theme uses (#page, #content, #primary, .site-content,
+ * .site-main). That silently undid the layout a page builder had designed —
+ * boxed content went full-bleed, container widths and gutters disappeared —
+ * while colours, text and every other property inside the content still looked
+ * correct. The result looked exactly like "my page builder changes are not
+ * being applied", and it happened with every builder.
+ *
+ * Those resets are gone on purpose, and nothing like them may be added back:
+ *
+ *  - The stage is taken out of the flow and pinned to the top-left corner
+ *    (section 4), so margins, paddings and offsets of the containers *around*
+ *    it cannot shift the canvas. There is nothing left for page-level spacing
+ *    resets to fix.
+ *  - The stage's own width is frozen by the script to the size it just
+ *    measured, i.e. to the width the builder gave the page, so percentage,
+ *    boxed and full-bleed layouts all keep the geometry they were designed
+ *    with and are then scaled uniformly.
+ *
+ * Rule of thumb for maintainers: this file may hide chrome, zero the theme's own
+ * wrapper spacing (section 2b), flush the top of the canvas (section 2c), lock
+ * the viewport and position the stage. It may never size or paint anything, and
+ * it may never space the content itself: the chains it normalises stop at the
+ * content wrapper, section 2c only ever touches the **top** edge, and no rule
+ * here sets width, max-width or min-width on anything. (Section 2c does hide
+ * leading boxes that paint nothing — those are the theme's own leftovers, and
+ * they can only be boxes with no visible text and no background or border.)
+ *
+ * The one width that is ever changed is changed by tv-display.js, not by a rule
+ * here: while the editor canvas is locked (Canvas Force), the engine lifts the
+ * `max-width` cap the **theme** put on the design wrapper, so the same page is
+ * not a 768px design in the canvas and a 645px column on the screen. It is
+ * written inline and removed again on every measurement, and it never touches a
+ * boxed width set inside the design.
+ * ---------------------------------------------------------------------- */
+
+/* Remove outline boxes that only make sense on an interactive site. Focus
+   outlines are an interaction affordance and have no effect on layout. */
+body.fiveprayer-tv-active *:focus {
+	outline: none !important;
+}
+
+/* Hide scrollbars on the stage even if a builder forces its own overflow. */
+body.fiveprayer-tv-active ::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
+
+/* -------------------------------------------------------------------------
+ * 4. Scaling stage
+ *
+ * tv-display.js picks the page's main content wrapper, freezes its measured
+ * width, adds this class and writes the transform. `position: fixed` +
+ * `overflow: visible` keeps the scaled canvas inside the locked viewport.
+ *
+ * No width, max-width or background is set here: the width comes from the
+ * script (it is the page's own measured width) and the background belongs to
+ * the page. Setting either here would be the very kind of override section 3
+ * warns against.
+ *
+ * `transform-origin` carries `!important` for the same reason `position`, `top`
+ * and `left` do: the offset the script writes is measured from the wrapper's
+ * **top-left** corner, so a page builder that anchors its own wrapper
+ * differently moves the whole canvas. A builder publishes its own reset on the
+ * very element that is its page wrapper — Brizy ships
+ * `.brz .brz-reset-all { transform-origin: 50% 50% }` on its canvas wrapper, and
+ * that selector (two classes) outweighs this one (one class) — so the scaled
+ * canvas was displaced by `(1 - scale) x size / 2` towards the bottom-right: on
+ * the 768x1024 canvas of a Brizy display page that is 37 px of the left band
+ * turned into 0 px on the right and the design's top edge pushed 14 px down, and
+ * on any screen with a wider box it puts that part of the design off the screen.
+ * The script also writes the origin inline while it stages the element, so a
+ * builder rule that is itself `!important` still cannot re-anchor the transform.
+ * ---------------------------------------------------------------------- */
+
+.fiveprayer-tv-stage {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	margin: 0 !important;
+	transform-origin: top left !important;
+	overflow: visible !important;
+	/*
+	 * No `will-change: transform` here, on purpose. The engine always writes a
+	 * real `transform` on this element, and a non-none transform already promotes
+	 * it to its own composited layer — so the hint bought nothing. What it did
+	 * cost was measurable on the one thing a display page does interactively:
+	 * hovering a timetable row. With the hint, Chrome keeps the whole-page layer
+	 * "will change" and re-rasterises tiles aggressively; measured on the display
+	 * page at 1920x1080, four row-hover transitions spent 9.5 ms rasterising with
+	 * the hint and 3.9 ms without it (59% less), for identical paint time and
+	 * identical output. The hint never covered the only moment it could have
+	 * helped either: the canvas stays hidden (`fiveprayer-tv-js`) until
+	 * `applyScale()` has already written the transform.
+	 */
+}
+
+/* -------------------------------------------------------------------------
+ * 5. No-flash boot
+ *
+ * The scaling engine can only run after the document has parsed, so without
+ * this the page would paint once at its natural size and then visibly jump to
+ * the fitted scale. The `fiveprayer-tv-js` class is added by a one-line inline
+ * script in the <head> — i.e. before the first paint — so the canvas can be
+ * held invisible until the engine reports it has positioned everything
+ * (`fiveprayer-tv-ready` on <html>).
+ *
+ * The background stays painted while the content is hidden, so the screen
+ * shows the black signage canvas rather than a white flash.
+ *
+ * JavaScript-off safety: the class can only come from script, so a visitor
+ * with scripts disabled never gets the hidden state and sees a normal page.
+ * JavaScript-on safety: the engine also reveals on error and after a short
+ * timeout, so the canvas can never stay invisible.
+ * ---------------------------------------------------------------------- */
+
+html.fiveprayer-tv-js body.fiveprayer-tv-active {
+	visibility: hidden;
+}
+
+html.fiveprayer-tv-js.fiveprayer-tv-ready body.fiveprayer-tv-active {
+	visibility: visible;
+}

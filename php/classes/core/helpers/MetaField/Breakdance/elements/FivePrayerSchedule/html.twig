@@ -1,0 +1,62 @@
+<div class="{{ '%%CLASSES%%' }}" {{ '%%ATTRIBUTES%%' }} {{ '%%PSEUDO_SELECTOR_CLASSES%%' }}>
+    <div class="fiveprayer-schedule-container">
+        <div class="schedule-header">
+            <h3>Daily Prayer Schedule{% if properties.content.schedule_settings.show_today_only %} - Today{% endif %}</h3>
+        </div>
+        
+        <div class="schedule-list {{ properties.design.schedule_style.layout }}">
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Fajr{% endif %}</div>
+                <div class="prayer-time">05:30 AM</div>
+                {% if properties.content.schedule_settings.show_iqamah %}
+                <div class="iqamah-time">Iqamah: 05:45 AM</div>
+                {% endif %}
+            </div>
+            
+            {% if properties.content.schedule_settings.include_sunrise %}
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Sunrise{% endif %}</div>
+                <div class="prayer-time">07:15 AM</div>
+            </div>
+            {% endif %}
+            
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Dhuhr{% endif %}</div>
+                <div class="prayer-time">01:15 PM</div>
+                {% if properties.content.schedule_settings.show_iqamah %}
+                <div class="iqamah-time">Iqamah: 01:30 PM</div>
+                {% endif %}
+            </div>
+            
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Asr{% endif %}</div>
+                <div class="prayer-time">04:45 PM</div>
+                {% if properties.content.schedule_settings.show_iqamah %}
+                <div class="iqamah-time">Iqamah: 05:00 PM</div>
+                {% endif %}
+            </div>
+            
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Maghrib{% endif %}</div>
+                <div class="prayer-time">06:30 PM</div>
+                {% if properties.content.schedule_settings.show_iqamah %}
+                <div class="iqamah-time">Iqamah: 06:35 PM</div>
+                {% endif %}
+            </div>
+            
+            <div class="schedule-item">
+                <div class="prayer-name">{% if properties.content.schedule_settings.show_prayer_names %}Isha{% endif %}</div>
+                <div class="prayer-time">08:15 PM</div>
+                {% if properties.content.schedule_settings.show_iqamah %}
+                <div class="iqamah-time">Iqamah: 08:30 PM</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if properties.content.schedule_settings.show_countdown %}
+        <div class="next-prayer-countdown">
+            <p>Next Prayer: <span class="next-prayer-name">Dhuhr</span> in <span class="countdown-timer">02:15:30</span></p>
+        </div>
+        {% endif %}
+    </div>
+</div>

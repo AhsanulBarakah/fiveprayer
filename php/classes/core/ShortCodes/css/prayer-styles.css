@@ -1,0 +1,484 @@
+/* Print Styles
+ *
+ * Everything here matches the plugin's own markup only. The page-wide reset
+ * that used to live in this file (hiding `body *`, headings, `.entry-content`,
+ * navigation and so on, and moving the timetable to the top-left) is gone:
+ * printing a page that happens to contain a shortcode must not restyle or hide
+ * the rest of it. The Print button prints the timetable from its own frame,
+ * which carries only the timetable markup plus these rules.
+ */
+@media print {
+    .fiveprayer__printer {
+        width: 100% !important;
+        max-width: inherit !important;
+        padding-bottom: 8mm !important;
+    }
+
+    /* Page controls are not timetable content. */
+    #fiveprayer-no-print,
+    .fiveprayer__printer .fiveprayer__printer_option,
+    .fiveprayer-printer-button,
+    .fiveprayer-hide-on-print {
+        display: none !important;
+    }
+
+    .fiveprayer__printer * {
+        white-space: nowrap !important;
+        height: fit-content !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 8px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .fiveprayer__printer .printer_line {
+        font-size: 12px !important;
+        white-space: wrap !important;
+    }
+
+    .fiveprayer__noDisplay {
+        display: block;
+        margin-bottom: 10px !important;
+    }
+
+    .fiveprayer__printer .next-prayer-notice {
+        display: flex !important;
+        gap: 8px !important;
+        justify-content: center !important;
+    }
+
+    #fiveprayer-div-to {
+        width: 100% !important;
+        max-width: inherit !important;
+        /* The wrapper scrolls the month table on narrow screens; paper has no
+           scrollbar, so printing must not clip the table at the wrapper. */
+        overflow: visible !important;
+    }
+
+    /* The month table takes the paper width, and its headers and cells may
+       wrap: with every word on one line the thirteen-column table grew past
+       the sheet and lost its right-hand prayers. */
+    #fiveprayer-div-to-print {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    #fiveprayer-div-to-print th,
+    #fiveprayer-div-to-print td {
+        white-space: normal !important;
+    }
+
+    .fiveprayer__printer th,
+    .fiveprayer__printer td,
+    .fiveprayer__DairyPrayer_ th,
+    .fiveprayer__DairyPrayer_ td {
+        padding: 0 !important;
+        padding-inline: 7px !important;
+        padding-block: 3px !important;
+        border: var(--fiveprayer-border-size, 1px) var(--fiveprayer-border-style, solid) var(--fiveprayer-clr-border, rgba(0, 0, 0, 0.1)) !important;
+        text-align: center !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    .fiveprayer__tbhead {
+        width: 100% !important;
+        background: var(--fiveprayer-bg-first) !important;
+        color: var(--fiveprayer-clr-first) !important;
+    }
+
+    .fiveprayer__tbmonthfirst {
+        background-color: var(--fiveprayer-bg-first) !important;
+        color: var(--fiveprayer-clr-first) !important;
+    }
+
+    .fiveprayer__tbmonthsecond {
+        background-color: var(--fiveprayer-bg-second) !important;
+        color: var(--fiveprayer-clr-second) !important;
+    }
+
+    .fiveprayer__printer tbody tr:nth-child(even) {
+        background-color: var(--fiveprayer-bg-even) !important;
+        color: var(--fiveprayer-clr-even) !important;
+    }
+
+    .fiveprayer__printer tbody tr:nth-child(odd) {
+        background-color: var(--fiveprayer-bg-odd) !important;
+        color: var(--fiveprayer-clr-odd) !important;
+    }
+
+    .fiveprayer__DairyPrayer_ tbody tr:nth-child(even) {
+        background-color: var(--fiveprayer-bg-even) !important;
+        color: var(--fiveprayer-clr-even) !important;
+    }
+
+    .fiveprayer__DairyPrayer_ tbody tr:nth-child(odd) {
+        background-color: var(--fiveprayer-bg-odd) !important;
+        color: var(--fiveprayer-clr-odd) !important;
+    }
+
+    .fiveprayer__today_row {
+        background-color: var(--fiveprayer-bg-highlight);
+        color: var(--fiveprayer-clr-highlight);
+    }
+
+    /* No highlight on paper: the month prints with its normal odd/even
+       striping, so today's row does not stand out (or soak up ink). The
+       nth-child variant is needed because the template's highlighted row rule
+       is an id selector with !important; matching the row's own parity outranks
+       it and keeps the stripe rather than leaving the row blank. */
+    #fiveprayer-div-to-print tbody tr.fiveprayer__today_row:nth-child(odd) {
+        background-color: var(--fiveprayer-bg-odd) !important;
+        color: var(--fiveprayer-clr-odd) !important;
+    }
+
+    #fiveprayer-div-to-print tbody tr.fiveprayer__today_row:nth-child(even) {
+        background-color: var(--fiveprayer-bg-even) !important;
+        color: var(--fiveprayer-clr-even) !important;
+    }
+
+    .fiveprayer__DairyPrayer_ {
+        border-collapse: collapse !important;
+        width: fit-content !important;
+    }
+
+    .fiveprayer__printer .fiveprayer__TablePrayer_,
+    .fiveprayer__printer .fiveprayer__TablePrayer {
+        margin-top: 4mm !important;
+    }
+
+    .fiveprayer__printer .printer-page-container {
+        display: grid !important;
+        grid-template-columns: repeat(3, 2fr) !important;
+        grid-gap: 30px !important;
+        margin-bottom: 1px !important;
+        justify-content: stretch !important;
+    }
+
+    .fiveprayer__printer .left-printer {
+        margin: 0 auto !important;
+    }
+
+    .fiveprayer__printer .med-printer {
+        padding-inline: 48px !important;
+        text-align: center !important;
+    }
+
+    .fiveprayer__printer .med-printer img {
+        width: 160px !important;
+        height: 130px !important;
+        object-fit: contain !important;
+        max-width: 160px !important;
+        max-height: 130px !important;
+    }
+
+    .fiveprayer__printer .right-printer {
+        margin: 0 auto !important;
+        padding-left: 0.5rem !important;
+    }
+}
+
+/* Printer Button Shortcode Styles */
+.fiveprayer-printer-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25em;
+    padding: 0.5em 1em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    /* The plugin's own colours, not the theme's presets: a theme can change
+       its palette at any time and must not restyle a plugin control. */
+    background-color: #0073aa;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.fiveprayer-printer-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fiveprayer-printer-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.fiveprayer-printer-button.fiveprayer-hide-on-print {
+    display: inline-flex;
+}
+
+/* Custom URL Button Styles - uses same classes as print button */
+/* No additional styles needed - inherits from fiveprayer__clickPrint */
+
+/* Hide the plugin's print-hidden elements when printing */
+@media print {
+    .fiveprayer-hide-on-print {
+        display: none !important;
+    }
+    
+    /* Ensure printer button shortcode is hidden when printing */
+    .fiveprayer-printer-button {
+        display: none !important;
+    }
+}
+
+/* Screen Styles */
+@media screen {
+    .fiveprayer__printer .printer-page-container {
+        display: grid;
+        grid-template-columns: repeat(3, 2fr);
+        grid-gap: 0px;
+        align-items: stretch;
+        justify-content: stretch;
+    }
+
+    .fiveprayer__printer .printer-page-container span {
+        height: 0;
+    }
+
+    .fiveprayer__printer .med-printer {
+        padding-inline: 48px;
+        text-align: center;
+    }
+
+    .fiveprayer__printer .med-printer img {
+        width: 160px;
+        height: 130px;
+        object-fit: contain;
+    }
+
+    .fiveprayer__noDisplay,
+    .fiveprayer__printer #printerdisplay {
+        display: none;
+    }
+
+    #fiveprayer-div-to {
+        border-collapse: collapse;
+        max-width: inherit;
+        margin: 0;
+    }
+
+    /* Separate borders for the month table: a collapsed-border table cannot be
+       repainted one row at a time, so hovering a row repainted the whole month.
+       Each cell draws only its right and bottom edge (see the calendar
+       template), which keeps the lines single. Print keeps `collapse` above:
+       paper does not repaint. */
+    #fiveprayer-div-to-print {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .fiveprayer__printer_option {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .fiveprayer__printer_option select {
+        padding: 9px;
+    }
+
+    .fiveprayer_top {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    .fiveprayer_top select {
+        width: 200px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .fiveprayer_top .fiveprayer__clickPrint {
+        width: auto !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    html body .fiveprayer_top {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    .fiveprayer__clickPrint {
+        padding: 9px;
+        cursor: pointer;
+        width: auto;
+    }
+
+    .fiveprayer__printer_option form {
+        display: contents;
+    }
+
+    #fiveprayer-no-print table th {
+        border: none;
+    }
+
+    .fiveprayer__printer thead {
+        vertical-align: 0;
+    }
+
+    .fiveprayer__printer th,
+    .fiveprayer__printer td,
+    .fiveprayer__DairyPrayer_ th,
+    .fiveprayer__DairyPrayer_ td {
+        padding: 0;
+        padding-inline: 3px;
+        padding-block: 3px;
+        border: var(--fiveprayer-border-size, 1px) var(--fiveprayer-border-style, solid) var(--fiveprayer-clr-border, rgba(0, 0, 0, 0.1));
+        text-align: center;
+    }
+
+    .fiveprayer__printer th[style*="border"],
+    .fiveprayer__printer td[style*="border"],
+    .fiveprayer__DairyPrayer_ th[style*="border"],
+    .fiveprayer__DairyPrayer_ td[style*="border"] {
+        border: var(--fiveprayer-border-size, 1px) var(--fiveprayer-border-style, solid) var(--fiveprayer-clr-border, rgba(0, 0, 0, 0.1));
+    }
+
+    .fiveprayer__tbhead {
+        width: 100%;
+        background: var(--fiveprayer-bg-first);
+        color: var(--fiveprayer-clr-first);
+    }
+
+    .fiveprayer__today_row {
+        background-color: var(--fiveprayer-bg-highlight) !important;
+        color: var(--fiveprayer-clr-highlight) !important;
+    }
+
+    .fiveprayer__tbmonthfirst {
+        background-color: var(--fiveprayer-bg-first);
+        color: var(--fiveprayer-clr-first);
+    }
+
+    .fiveprayer__tbmonthsecond {
+        background-color: var(--fiveprayer-bg-second);
+        color: var(--fiveprayer-clr-second);
+    }
+
+    /* The highlighted row is excluded from the selector instead of being left
+       to win on specificity: these rules have to be `!important` to hold
+       against a theme's own table striping (`table:not(.x):not(.y) tbody
+       tr:nth-child(2n+1)` outranks a two-class rule and painted the odd rows
+       white behind the plugin's white text). Excluding the highlighted row
+       keeps its own `!important` rule in charge of it. */
+    .fiveprayer__printer tbody tr:not(.fiveprayer__today_row):nth-child(even),
+    .fiveprayer__DairyPrayer_ tbody tr:not(.fiveprayer__today_row):nth-child(even) {
+        background-color: var(--fiveprayer-bg-even) !important;
+        color: var(--fiveprayer-clr-even) !important;
+    }
+
+    .fiveprayer__printer tbody tr:not(.fiveprayer__today_row):nth-child(odd),
+    .fiveprayer__DairyPrayer_ tbody tr:not(.fiveprayer__today_row):nth-child(odd) {
+        background-color: var(--fiveprayer-bg-odd) !important;
+        color: var(--fiveprayer-clr-odd) !important;
+    }
+
+    .fiveprayer-select-print {
+        display: flex;
+        padding: 0;
+        margin: 0;
+    }
+
+    .fiveprayer-select-print form {
+        margin-bottom: 0;
+    }
+
+    .fiveprayer-select-print select,
+    #fiveprayer-click-print {
+        border: none;
+        height: 100%;
+    }
+
+    .fiveprayer-select-print select {
+        border: none;
+        align-self: center;
+    }
+
+    .fiveprayer-select-print .fiveprayer__clickPrint {
+        border: none;
+    }
+
+    .fiveprayer__DairyPrayer_ {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .fiveprayer__DairyPrayer_ th,
+    .fiveprayer__DairyPrayer_ td {
+        padding: 5px;
+        border-width: 0 1px 1px 0;
+        border: var(--fiveprayer-border-size, 1px) var(--fiveprayer-border-style, solid) var(--fiveprayer-clr-border, rgba(0, 0, 0, 0.1));
+        text-align: center;
+    }
+
+    .fiveprayer__DairyPrayerf_ th,
+    .fiveprayer__DairyPrayerf_ td {
+        padding: 10px;
+    }
+
+    .fiveprayer__tbhead {
+        background: var(--fiveprayer-bg-first);
+        color: var(--fiveprayer-clr-first);
+    }
+
+    .fiveprayer__highlight {
+        background-color: var(--fiveprayer-bg-highlight);
+        color: var(--fiveprayer-clr-highlight);
+    }
+
+    .fiveprayer__printer .next-prayer-notice,
+    .fiveprayer-container .next-prayer-notice {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+    }
+
+}
+
+/* The timetable decides how fast its rows respond, not the active theme.
+
+   Nothing here changes how the table looks. A block theme can print a
+   `transition` — frequently `transition: all` — from theme.json, Global
+   Styles, or a pattern stylesheet that matches tables, rows or cells.
+   `transition` is not inherited, so it only bites through a matching selector,
+   but when it does the row hover stops being an instant repaint and becomes an
+   animation the browser has to drive on the main thread: a <tr> cannot be
+   composited, and `transition-property: all` drags layout properties (padding,
+   border-width, line-height) into it, so every frame re-solves a
+   collapsed-border table. `will-change` is reset for the same reason: on a
+   table part it cannot make the row compositable, it can only force a layer
+   whose whole texture then has to be re-rastered on hover. `animation` covers
+   a keyframe-driven theme effect, which is the same main-thread cost.
+
+   Scoped to this plugin's own timetable wrappers and nothing else, and
+   declared in the shipped stylesheet so it applies on every theme, whether or
+   not the inline hover rules are printed. */
+html body .fiveprayer-container table,
+html body .fiveprayer-container table *,
+html body .fiveprayer__iqamah_next table,
+html body .fiveprayer__iqamah_next table *,
+html body .fiveprayer-default-layout table,
+html body .fiveprayer-default-layout table *,
+html body .fiveprayer-hijri-layout table,
+html body .fiveprayer-hijri-layout table *,
+html body .fiveprayer__printer table,
+html body .fiveprayer__printer table * {
+    transition: none !important;
+    animation: none !important;
+    will-change: auto !important;
+}

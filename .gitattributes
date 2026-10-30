@@ -1,0 +1,38 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# PHP files - LF line endings
+*.php text eol=lf
+
+# JS/TS/CSS/HTML files - LF line endings
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+
+# JSON/YAML/MD files - LF line endings
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+
+# Binary files - don't touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.zip binary
+
+# Git files
+.gitignore text
+.gitattributes text
+.distignore text

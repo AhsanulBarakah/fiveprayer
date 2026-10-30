@@ -1,0 +1,35 @@
+.fiveprayer-deprecation-notice {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffecb5;
+  padding: 15px 20px;
+  margin: 20px 0;
+  border-radius: 6px;
+  font-size: 15px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #856404;
+  z-index: 9999; /* Ensures the notice appears on top */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Adds shadow to help it stand out */
+}
+
+.fiveprayer-deprecation-notice .fiveprayer-dismiss-notice {
+  background: none;
+  border: none;
+  color: #856404;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 10px;
+}
+
+.fiveprayer-deprecation-notice .fiveprayer-dismiss-notice:hover {
+  color: #533f03;
+  text-decoration: underline;
+}
+ 
+/* #wpbody-content {
+	padding-bottom: 0;
+  padding-bottom:5px;
+} */

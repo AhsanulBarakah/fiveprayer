@@ -1,0 +1,269 @@
+/**
+ * FivePrayer — TV Mode editor guides: Canvas Force & Safe Zone Guide
+ * (editor-only).
+ *
+ * Enqueued only while at least one of the two editor guides of the TV Display
+ * Mode page is on — **Canvas Force** or **Safe Zone Guide** — on a display page,
+ * inside the page builder's editing canvas (the Block Editor or the front-end
+ * URL a builder loads into its iframe). Nothing here ever reaches the finished,
+ * front-end display page.
+ *
+ * The controller (tv-canvas-locker.js) does three things this stylesheet frames:
+ *   - locks the canvas wrapper to the chosen width × height (inline, because the
+ *     numbers come from the settings) and adds `.fiveprayer-canvas-locked`;
+ *   - adds `.fiveprayer-safe-zone` inside that wrapper and sizes its two frames to
+ *     the canvas's *measured* current box in pixels (the custom property below is
+ *     only a fallback): the top and bottom bands are always exactly equal;
+ *   - keeps the wrapper's parent scrollable so a canvas taller than the screen
+ *     can still be scrolled through.
+ *
+ * The overlay is inert: `pointer-events: none` and a very high `z-index`, so it
+ * is a visual reference only and never blocks a click, drag or selection in the
+ * builder underneath it.
+ *
+ * The locked canvas is centred horizontally in the editing area (see the
+ * `margin-left/right: auto` pair below), so the box the screen will show sits in
+ * the middle of the workspace instead of hugging its left edge — the same place
+ * it occupies on the television, where the scaling engine centres any leftover
+ * space the "contain" fit leaves.
+ */
+
+/* The overlay host. With **Canvas Force** off and only the **Safe Zone Guide**
+   on, the wrapper is not resized — but the absolutely positioned overlay still
+   needs a positioning context, so this class provides one on its own. Harmless
+   when both switches are on (the locked wrapper is already `position: relative`). */
+.fiveprayer-safe-zone-host {
+	position: relative !important;
+}
+
+/* The locked canvas wrapper. The width/height are set inline by the controller;
+   this only makes the box a positioning context. The overlay clips *itself*, so
+   the canvas must not clip its own content: a page taller than the TV box stays
+   visible (the parent scrolls to it) instead of being silently cut off. */
+.fiveprayer-canvas-locked {
+	position: relative !important;
+	box-sizing: border-box !important;
+	overflow: visible !important;
+	/* The chosen pixel size is authoritative: neutralise any max-* the theme or
+	   builder put on the wrapper so a locked 1920-wide canvas is not capped.
+	   The display page mirrors this lift while Canvas Force is on (tv-display.js,
+	   `measure()`), so the design keeps the same width outside the editor as it
+	   has inside this box. */
+	max-width: none !important;
+	max-height: none !important;
+	flex: none !important;
+	/* Centre the canvas in the editor viewport when the workspace is wider than
+	   the chosen size, instead of leaving it pinned to the left edge. Auto
+	   margins work on a block in normal flow (the wrapper has a definite inline
+	   width) and on a flex item, which covers the builders that lay their canvas
+	   out as a flex child. Vertical centring is deliberately not attempted: `auto`
+	   top/bottom margins only resolve in a flex/grid parent, so a normal-flow
+	   editor would be left unchanged. */
+	margin-left: auto !important;
+	margin-right: auto !important;
+}
+
+/* The overlay layer. It fills the locked wrapper and ignores the pointer.
+   Explicit edges (not the `inset` shorthand) so every browser, and the
+   builder's own CSS, lay it out the same way. */
+.fiveprayer-safe-zone {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 2147483000;
+	pointer-events: none;
+	overflow: hidden;
+	--fiveprayer-safe-zone-inset: 5%;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* The outer frame is the screen: the exact locked width × height. */
+.fiveprayer-safe-zone__outer {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	border: 2px solid rgba(0, 229, 255, 0.9);
+	border-radius: 2px;
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+/* The inner frame is the safe area. Its dashed neon border sits one overscan
+   margin in from every edge; the huge spread shadow dims the band between the
+   two frames so the croppable strip is obvious. Because the overlay clips to the
+   wrapper, the dim never leaks onto the rest of the editor. */
+.fiveprayer-safe-zone__inner {
+	position: absolute;
+	top: var(--fiveprayer-safe-zone-inset, 5%);
+	right: var(--fiveprayer-safe-zone-inset, 5%);
+	bottom: var(--fiveprayer-safe-zone-inset, 5%);
+	left: var(--fiveprayer-safe-zone-inset, 5%);
+	border: 2px dashed rgba(0, 255, 170, 0.95);
+	border-radius: 2px;
+	box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.28);
+}
+
+/* The size badge: the locked size and what the two frames mean, kept *outside*
+   the canvas — it hangs just above the wrapper's top edge, left-aligned with the
+   canvas, level with the top safe-zone line. Sitting outside means it never
+   covers the design or the guide's own frames. It is a sibling of the overlay
+   (which clips itself), so the wrapper is its positioning context. */
+.fiveprayer-safe-zone__badge {
+	position: absolute;
+	left: 0;
+	bottom: 100%;
+	margin-bottom: 6px;
+	z-index: 2147483100;
+	max-width: 100%;
+	/* Read-only: never intercept a click meant for the builder underneath. */
+	pointer-events: none;
+	background: rgba(2, 6, 23, 0.86);
+	color: #e0f2fe;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.4;
+	padding: 4px 9px;
+	border-radius: 4px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Fallback position. A canvas that starts at the very top of the document has
+   no room above it, so the badge would be pushed off the top edge and lost;
+   there it drops back onto the canvas's own top edge instead. The controller
+   adds the class only when it has measured that the outside position would not
+   fit (see `placeBadge`). */
+.fiveprayer-safe-zone__badge--inside {
+	bottom: auto;
+	top: 8px;
+	left: 8px;
+	margin-bottom: 0;
+	max-width: calc(100% - 16px);
+}
+
+/* A one-line reminder of what the two frames mean. */
+.fiveprayer-safe-zone__hint {
+	display: block;
+	margin-top: 1px;
+	font-weight: 500;
+	font-size: 10px;
+	color: #7dd3fc;
+}
+
+/* ------------------------------------------------------------------ *
+ * In-editor control: a small floating pill that expands into one switch
+ * per half (Canvas Force, Safe Zone Guide). It is the only part of this
+ * stylesheet that is interactive, so it opts back into pointer events and
+ * sits above the guide overlay. It lives in the canvas document's body, not
+ * inside the locked wrapper, so `overflow: hidden` can never clip it.
+ * ------------------------------------------------------------------ */
+.fiveprayer-locker-ui {
+	position: fixed;
+	left: 14px;
+	bottom: 14px;
+	z-index: 2147483600;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	pointer-events: auto;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.fiveprayer-locker-ui__button {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 28px;
+	padding: 0 11px;
+	border: 1px solid rgba(15, 23, 42, 0.35);
+	border-radius: 999px;
+	background: rgba(2, 6, 23, 0.9);
+	color: #e0f2fe;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.fiveprayer-locker-ui__bar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* The caret that opens the individual switches (only present when the site has
+   more than one half turned on). */
+.fiveprayer-locker-ui__caret {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid rgba(15, 23, 42, 0.35);
+	border-radius: 999px;
+	background: rgba(2, 6, 23, 0.9);
+	color: #e0f2fe;
+	font-size: 12px;
+	line-height: 1;
+	cursor: pointer;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.fiveprayer-locker-ui__dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #22d3ee;
+	box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25);
+}
+
+/* Grey dot while both halves of the feature are switched off for the session. */
+.fiveprayer-locker-ui[data-active="0"] .fiveprayer-locker-ui__dot {
+	background: #64748b;
+	box-shadow: none;
+}
+
+.fiveprayer-locker-ui__panel {
+	width: 210px;
+	padding: 9px 12px;
+	border: 1px solid rgba(15, 23, 42, 0.35);
+	border-radius: 10px;
+	background: rgba(2, 6, 23, 0.94);
+	color: #e0f2fe;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* `hidden` is what toggles the panel; state it explicitly so a builder's own
+   stylesheet cannot turn it back into a visible box. */
+.fiveprayer-locker-ui__panel[hidden] {
+	display: none;
+}
+
+.fiveprayer-locker-ui__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 0;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.fiveprayer-locker-ui__row input {
+	margin: 0;
+	cursor: pointer;
+}
+
+.fiveprayer-locker-ui__hint {
+	margin: 6px 0 0;
+	font-size: 10px;
+	line-height: 1.35;
+	color: #7dd3fc;
+}
