@@ -23,6 +23,17 @@ declare global {
         settingsHash: string;
       };
       /**
+       * Delete all data on uninstall — the opt-in uninstall.php reads, plus the
+       * nonce and action that save it. Localized by
+       * `FivePrayer\Core\Admin\UninstallSettings`.
+       */
+      uninstallData?: {
+        enabled: boolean;
+        nonce: string;
+        ajaxAction: string;
+        optionName: string;
+      };
+      /**
        * TV Display Mode (turning one page or post into a full-screen display)
        * — one switch per post type, the layout width a display page is built
        * at, plus the nonce that saves them. Localized by

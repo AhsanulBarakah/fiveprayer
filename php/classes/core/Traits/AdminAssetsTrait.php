@@ -94,6 +94,9 @@ trait AdminAssetsTrait
             // Share on Local Network (sharing the site on the local network) state
             // plus the nonce the TV Display Mode page needs to save it.
             'localTesting' => \FivePrayer\Core\Admin\LocalTestingMode::get_admin_state(),
+            // Delete-all-data-on-uninstall opt-in plus the nonce that saves it.
+            // Read only by uninstall.php.
+            'uninstallData' => \FivePrayer\Core\Admin\UninstallSettings::get_admin_state(),
             // TV Display Mode state: the two switches (Pages and Posts) that
             // decide whether the "Enable TV Mode" checkbox is offered in
             // that editor at all, plus the nonce that saves them.
@@ -265,6 +268,9 @@ trait AdminAssetsTrait
             'nonce' => wp_create_nonce('wp_rest'),
             // See the matching note in the main admin bootstrap.
             'localTesting' => \FivePrayer\Core\Admin\LocalTestingMode::get_admin_state(),
+            // Delete-all-data-on-uninstall opt-in plus the nonce that saves it.
+            // Read only by uninstall.php.
+            'uninstallData' => \FivePrayer\Core\Admin\UninstallSettings::get_admin_state(),
             // See the matching note in the main admin bootstrap.
             'tvDisplay'    => \FivePrayer\Core\Admin\TVDisplayMode::get_admin_state(),
             // See the matching note in the main admin bootstrap.

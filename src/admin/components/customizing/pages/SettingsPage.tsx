@@ -13,6 +13,7 @@ import DaySmoothingSettings from '../../prayerSetting/DaySmoothingSettings';
 import CalendarTypeSettings from '../../prayerSetting/CalendarTypeSettings';
 import AdvancedSchedulesSettings from '../../prayerSetting/AdvancedSchedulesSettings';
 import NextPrayerCountdownSettings from '../../prayerSetting/NextPrayerCountdownSettings';
+import UninstallDataCard from '../../prayerSetting/UninstallDataCard';
 import ExtraPrayersSettings from '../../prayerSetting/ExtraPrayersSettings';
 import DayDisplaySettings from '../../prayerSetting/DayDisplaySettings';
 import FeatureSwitchesPanel from '../../prayerSetting/FeatureSwitchesPanel';
@@ -471,6 +472,11 @@ class PanelBoundary extends React.Component<{ children: React.ReactNode }, { has
                 icon={currentCategory.icon}
               />
             )}
+
+            {/* Data retention. Off by default; only uninstall.php reads it. */}
+            <div className="mt-6">
+              <UninstallDataCard />
+            </div>
           </div>
         </div>
       </div>

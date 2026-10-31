@@ -22,6 +22,7 @@ use FivePrayer\Core\Admin\ApiAdmin;
 use FivePrayer\Core\Admin\TVDisplayMode;
 use FivePrayer\Core\Admin\LocalTestingMode;
 use FivePrayer\Core\Admin\TvCanvasLocker;
+use FivePrayer\Core\Admin\UninstallSettings;
 use FivePrayer\Core\Logging\Logger;
 use FivePrayer\Core\Helpers\MetaFieldGenerator;
 
@@ -40,8 +41,9 @@ class Plugin
     
     public function init(): void
     {
-        // Hook into the plugin uninstall (activation is handled in FivePrayerMain.php)
-        register_uninstall_hook(FIVEPRAYER_FILE, [__CLASS__, 'onUninstall']);
+        // Uninstall cleanup lives in uninstall.php. A callback registered with
+        // register_uninstall_hook() cannot be relied on: WordPress deletes the
+        // plugin's files before it runs one, so the callback may be gone.
 
         // Flush rewrite rules on first request after upgrade so REST API
         // routes are always present in the rewrite index.
@@ -182,6 +184,8 @@ class Plugin
         // (next to Pages and Posts); this class only registers the secure AJAX
         // endpoint that saves it, and is inert until that switch is turned on.
         (new LocalTestingMode())->register();
+        // Delete-all-data-on-uninstall opt-in (read only by uninstall.php)
+        (new UninstallSettings())->register();
         // Register API admin submenu and actions
         try {
             (new ApiAdmin());
@@ -285,22 +289,5 @@ class Plugin
                 ob_end_clean();
             }
         }
-    }
-    
-    /**
-     * Handle plugin uninstallation
-     */
-    public static function onUninstall(): void
-    {
-        // Clean up the image uploader
-        $image_uploader = new ImageUploader();
-        
-        // Delete the transient
-        delete_transient('fiveprayer_default_image_id');
-        
-        // Note: We don't delete the image from the media library here
-        // as it might be in use by other parts of the site
-
-        Logger::info('Plugin uninstalled', 'Plugin');
     }
 }
