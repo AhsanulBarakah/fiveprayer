@@ -36,6 +36,7 @@ use FivePrayer\Core\API\ApiKeyManager;
 use FivePrayer\Core\Assets\ESIDynamicContentHandler;
 use FivePrayer\Core\Controllers\API\EndPoints\TranslateController;
 use FivePrayer\Core\Helpers\PrayerFieldMap;
+use FivePrayer\Core\LocalNetworkRouter;
 use FivePrayer\Core\Logging\Logger;
 use FivePrayer\Core\Security\SecurityHelper;
 
@@ -527,6 +528,61 @@ fiveprayer_assert(
 );
 
 fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
+
+// ---------------------------------------------------------------------------
+// Share on Local Network
+// ---------------------------------------------------------------------------
+
+// The Host header is visitor-controlled, so it cannot be the only evidence a
+// request came from the LAN: REMOTE_ADDR is what decides.
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('127.0.0.1'), 'IPv4 loopback is a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('::1'), 'IPv6 loopback is a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('10.1.2.3'), 'a 10/8 address is a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('172.20.0.5'), 'a 172.16/12 address is a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('192.168.1.20'), 'a 192.168/16 address is a local client address');
+fiveprayer_assert(false === LocalNetworkRouter::is_local_address('172.32.0.5'), 'an address outside 172.16/12 is not a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('fd00::1'), 'a unique-local IPv6 address is a local client address');
+fiveprayer_assert(true === LocalNetworkRouter::is_local_address('fe80::1'), 'an IPv6 link-local address is a local client address');
+fiveprayer_assert(false === LocalNetworkRouter::is_local_address('8.8.8.8'), 'a public address is not a local client address');
+fiveprayer_assert(false === LocalNetworkRouter::is_local_address(''), 'an empty address is not a local client address');
+fiveprayer_assert(false === LocalNetworkRouter::is_local_address('not-an-ip'), 'a malformed address is not a local client address');
+
+$fiveprayer_router_server = $_SERVER;
+$fiveprayer_router_option = get_option(LocalNetworkRouter::OPTION_NAME, 0);
+$fiveprayer_router_class  = new ReflectionClass(LocalNetworkRouter::class);
+
+/** Reset the router's per-request state so bootstrap() can run again. */
+$fiveprayer_reset_router = static function () use ($fiveprayer_router_class) {
+    foreach (['bootstrapped' => false, 'active' => false, 'base_url' => ''] as $name => $value) {
+        $property = $fiveprayer_router_class->getProperty($name);
+        $property->setAccessible(true);
+        $property->setValue(null, $value);
+    }
+};
+
+update_option(LocalNetworkRouter::OPTION_NAME, 1);
+
+$_SERVER['HTTP_HOST']   = '192.168.1.104:10010';
+$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+$fiveprayer_reset_router();
+LocalNetworkRouter::bootstrap();
+fiveprayer_assert(false === LocalNetworkRouter::is_active(), 'a private Host from a public client does not activate the router');
+
+$_SERVER['REMOTE_ADDR'] = '192.168.1.20';
+$fiveprayer_reset_router();
+LocalNetworkRouter::bootstrap();
+
+if (defined('WP_ENVIRONMENT_TYPE') && 'production' === strtolower((string) WP_ENVIRONMENT_TYPE)) {
+    echo esc_html("SKIP: the router stays inert in a production environment by design\n");
+} else {
+    fiveprayer_assert(true === LocalNetworkRouter::is_active(), 'a private Host from a local client with the option on activates the router');
+    fiveprayer_assert('http://192.168.1.104:10010' === LocalNetworkRouter::get_base_url(), 'the router rewrites the URL to the request host');
+    fiveprayer_assert(defined('DONOTCACHEPAGE') && true === DONOTCACHEPAGE, 'the rewritten request is kept out of every page cache');
+    fiveprayer_assert(false !== has_action('send_headers', [LocalNetworkRouter::class, 'send_nocache_headers']), 'the rewritten request sends no-cache headers');
+}
+
+update_option(LocalNetworkRouter::OPTION_NAME, $fiveprayer_router_option);
+$_SERVER = $fiveprayer_router_server;
 
 // ---------------------------------------------------------------------------
 // ESI enablement

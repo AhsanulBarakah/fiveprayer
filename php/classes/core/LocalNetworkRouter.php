@@ -17,6 +17,17 @@
  * - It only ever activates when the request host is itself a loopback or
  *   private-network address. On a production domain the address check fails,
  *   so the router is a no-op even if the option is somehow left enabled.
+ * - The Host header is chosen by the visitor, so the host check on its own
+ *   proved nothing: a request from the internet carrying `Host: 192.168.x.x`
+ *   rewrote home and site URL for that request, and a page cache could store
+ *   the result (any email sent during it then carried the wrong host). The
+ *   client address the connection actually came from must be loopback or
+ *   private too — read straight from REMOTE_ADDR, never from a forwarded
+ *   header. A TV, phone or tablet on the same network passes; a visitor on
+ *   the internet does not.
+ * - A rewritten page is kept out of every shared cache: `nocache_headers()` is
+ *   sent and DONOTCACHEPAGE is defined, so the network address can never be
+ *   handed to someone who asked for the site's real one.
  * - It only ever activates when an administrator turned the switch on. The
  *   option (`fiveprayer_local_testing_mode`, the third switch of the TV Display
  *   Mode settings page) defaults to 0, so a fresh install rewrites nothing and
@@ -56,6 +67,24 @@ class LocalNetworkRouter
      * @var string
      */
     public const OPTION_NAME = 'fiveprayer_local_testing_mode';
+
+    /**
+     * Address ranges a local network device is allowed to connect from.
+     *
+     * Loopback plus the private IPv4 ranges and the IPv6 unique-local and
+     * link-local ranges. Anything else is the public internet.
+     *
+     * @var string[]
+     */
+    private const LOCAL_CLIENT_RANGES = [
+        '127.0.0.0/8',
+        '10.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16',
+        '::1/128',
+        'fc00::/7',
+        'fe80::/10',
+    ];
 
     /**
      * Whether {@see self::bootstrap()} has already run this request.
@@ -138,12 +167,17 @@ class LocalNetworkRouter
             return;
         }
 
-        // Second guard: the administrator must have opted in.
+        // Second guard: the connection itself must come from the local network.
+        if (!self::is_local_client()) {
+            return;
+        }
+
+        // Third guard: the administrator must have opted in.
         if (!self::is_enabled()) {
             return;
         }
 
-        // Third guard: the site must look like a local environment. A public
+        // Fourth guard: the site must look like a local environment. A public
         // host never reaches this point, so this is an extra safety net rather
         // than the primary gate.
         if (!self::is_local_environment()) {
@@ -152,6 +186,15 @@ class LocalNetworkRouter
 
         self::$active   = true;
         self::$base_url = self::build_base_url($host);
+
+        // The rewritten page must never reach a shared cache: it was rendered
+        // for a host that is not the site's address.
+        add_action('send_headers', [self::class, 'send_nocache_headers']);
+
+        if (!defined('DONOTCACHEPAGE')) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress core cache constant.
+            define('DONOTCACHEPAGE', true);
+        }
 
         // Never clobber a value the site owner set explicitly in wp-config.php.
         if (!defined('WP_HOME')) {
@@ -218,6 +261,103 @@ class LocalNetworkRouter
         }
 
         return $host;
+    }
+
+    /**
+     * Whether the client that made this request is on the local network.
+     *
+     * The Host header is visitor-controlled, so it cannot be the only evidence
+     * that a request came from the LAN. REMOTE_ADDR is the address the
+     * connection actually arrived on and is read directly, never from a
+     * forwarding header: a real LAN device passes, an internet visitor does
+     * not, whatever Host it sends.
+     *
+     * @return bool
+     */
+    public static function is_local_client(): bool
+    {
+        return self::is_local_address(fiveprayer_get_server_value('REMOTE_ADDR'));
+    }
+
+    /**
+     * Whether an address is loopback or in a private network range.
+     *
+     * @param string $address IPv4 or IPv6 address.
+     * @return bool
+     */
+    public static function is_local_address(string $address): bool
+    {
+        if ('' === $address || false === filter_var($address, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        foreach (self::LOCAL_CLIENT_RANGES as $range) {
+            if (self::address_matches_range($address, $range)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether an address falls inside a CIDR block.
+     *
+     * Both values are compared as packed bytes, so IPv4 and IPv6 are handled by
+     * the same code and a family mismatch is simply not a match.
+     *
+     * @param string $address IP address to test.
+     * @param string $range   CIDR block, e.g. `192.168.0.0/16`.
+     * @return bool
+     */
+    private static function address_matches_range(string $address, string $range): bool
+    {
+        $parts = explode('/', $range, 2);
+        if (2 !== count($parts)) {
+            return false;
+        }
+
+        [$network, $bits] = $parts;
+
+        $packed_address = inet_pton($address);
+        $packed_network = inet_pton($network);
+
+        if (false === $packed_address || false === $packed_network
+            || strlen($packed_address) !== strlen($packed_network)) {
+            return false;
+        }
+
+        $bits      = (int) $bits;
+        $whole     = intdiv($bits, 8);
+        $remainder = $bits % 8;
+
+        if ($whole > 0 && 0 !== strncmp($packed_address, $packed_network, $whole)) {
+            return false;
+        }
+
+        if (0 === $remainder) {
+            return true;
+        }
+
+        $mask = (0xFF << (8 - $remainder)) & 0xFF;
+
+        return (ord($packed_address[$whole]) & $mask) === (ord($packed_network[$whole]) & $mask);
+    }
+
+    /**
+     * Keep the rewritten request out of every page cache.
+     *
+     * Hooked on `send_headers` only while the router is active.
+     *
+     * @return void
+     */
+    public static function send_nocache_headers(): void
+    {
+        if (!self::$active || headers_sent()) {
+            return;
+        }
+
+        nocache_headers();
     }
 
     /**
