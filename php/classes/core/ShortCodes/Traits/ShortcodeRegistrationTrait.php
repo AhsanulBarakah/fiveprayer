@@ -29,8 +29,9 @@ trait ShortcodeRegistrationTrait
         add_action('updated_option', [self::class, 'maybe_purge_fragment_cache'], 10, 3);
         add_action('fiveprayer_invalidate_all', [self::class, 'purge_fragment_caches']);
 
-        add_action('wp_ajax_fiveprayer_dynamic_content', [$this, 'handle_dynamic_content_request']);
-        add_action('wp_ajax_nopriv_fiveprayer_dynamic_content', [$this, 'handle_dynamic_content_request']);
+        // `fiveprayer_dynamic_content` is answered by DynamicContentHandler
+        // only. It used to be registered here as well, so two callbacks sat on
+        // one action and whichever ran first exited before the other could.
     }
 
     public function register_shortcodes(): void

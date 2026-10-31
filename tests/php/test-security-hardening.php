@@ -531,6 +531,49 @@ fiveprayer_assert(
 fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
 
 // ---------------------------------------------------------------------------
+// Dynamic content
+// ---------------------------------------------------------------------------
+
+// One action, one callback. The action used to be registered by two handlers,
+// so the first one to run answered and the second could never execute.
+global $wp_filter;
+
+$fiveprayer_count_callbacks = static function ($hook) use (&$wp_filter) {
+    if (!isset($wp_filter[$hook])) {
+        return 0;
+    }
+
+    $count = 0;
+
+    foreach ($wp_filter[$hook]->callbacks as $callbacks) {
+        $count += count($callbacks);
+    }
+
+    return $count;
+};
+
+fiveprayer_assert(
+    1 === $fiveprayer_count_callbacks('wp_ajax_nopriv_fiveprayer_dynamic_content'),
+    'exactly one callback answers the public dynamic-content action'
+);
+fiveprayer_assert(
+    1 === $fiveprayer_count_callbacks('wp_ajax_fiveprayer_dynamic_content'),
+    'exactly one callback answers the logged-in dynamic-content action'
+);
+
+// A field that is not advertised renders nothing.
+$fiveprayer_dynamic  = new \FivePrayer\Core\Ajax\DynamicContentHandler();
+$fiveprayer_single_t = new ReflectionMethod(\FivePrayer\Core\Ajax\DynamicContentHandler::class, 'get_single_prayer_data');
+$fiveprayer_single_t->setAccessible(true);
+
+$fiveprayer_probe = $fiveprayer_single_t->invoke($fiveprayer_dynamic, 'some_private_property');
+
+fiveprayer_assert(
+    is_array($fiveprayer_probe) && (!isset($fiveprayer_probe['time']) || '' === $fiveprayer_probe['time']),
+    'an unknown single-prayer field returns no data'
+);
+
+// ---------------------------------------------------------------------------
 // Settings sanitisation
 // ---------------------------------------------------------------------------
 

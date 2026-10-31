@@ -67,6 +67,13 @@ class DynamicContentHandler {
         $content_type = sanitize_text_field(filter_input(INPUT_POST, 'content_type') ?: '');
         $field = sanitize_text_field(filter_input(INPUT_POST, 'field') ?: '');
 
+        // The complete set of answers this endpoint gives. Anything else is
+        // refused here, before a renderer is reached.
+        if (!in_array($content_type, ['current_time', 'next_prayer', 'single_prayer', 'hijri_date'], true)) {
+            wp_send_json_error('Invalid content type');
+            return;
+        }
+
         // Get fresh data based on content type
         switch ($content_type) {
             case 'current_time':
