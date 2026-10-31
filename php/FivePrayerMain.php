@@ -378,6 +378,10 @@ function fiveprayer_show_reset_notice() {
                 jQuery(document).ready(function($) {
                     $('#fiveprayer-reset-notice').on('click', '.notice-dismiss', function() {
                         $.ajax({
+                            // The handler reads $_POST['version']; jQuery sends
+                            // GET unless told otherwise, so this always came back
+                            // "Missing version" and the notice never went away.
+                            type: 'POST',
                             url: ajaxurl,
                             data: {
                                 action: 'fiveprayer_dismiss_reset_notice',
@@ -407,6 +411,12 @@ function fiveprayer_dismiss_reset_notice() {
     $version = sanitize_text_field(wp_unslash($_POST['version'] ?? ''));
     if ($version === '') {
         wp_die('Missing version');
+    }
+
+    // Only the version the plugin is actually on may name the option: the
+    // parameter used to be free text, so any string could create a row.
+    if (!hash_equals(fiveprayer_get_plugin_version(), $version)) {
+        wp_die('Unknown version');
     }
 
     update_option('fiveprayer_reset_notice_dismissed_' . $version, true);
