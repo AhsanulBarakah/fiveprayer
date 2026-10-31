@@ -189,14 +189,10 @@ class Plugin
         // Register API admin submenu and actions
         try {
             (new ApiAdmin());
-            // Removed excessive debug logging to reduce log duplication
-            Logger::info('API Management submenu page is now enabled and visible in admin menu', 'Plugin');
+            Logger::debug('API Management submenu page is now enabled and visible in admin menu', 'Plugin');
         } catch (Exception $e) {
             Logger::error('Error initializing ApiAdmin: ' . $e->getMessage(), 'Plugin');
         }
-
-        // Log information about Memory Test submenu
-        Logger::info('Memory Test submenu page is now enabled and visible in admin menu', 'Plugin');
 
         // Frontend components
         (new Assets())->register();
@@ -207,10 +203,11 @@ class Plugin
         // instead of 404 on sites where tables are not yet created.
         (new ApiControllerRegistrar())->init();
 
-        // Register PrayerSettingsMetaController early for AJAX hooks
+        // Register the AJAX hooks of the settings-meta controller exactly once.
+        // Its REST routes belong to ApiControllerRegistrar, so the constructor
+        // no longer adds a second rest_api_init callback.
         add_action('init', function() {
-            $controller = new \FivePrayer\Core\Controllers\API\EndPoints\PrayerSettingsMetaController();
-            // The constructor automatically calls register_hooks() which registers AJAX actions
+            (new \FivePrayer\Core\Controllers\API\EndPoints\PrayerSettingsMetaController())->register_hooks();
         }, 1); // Very early priority to ensure AJAX hooks are registered
     }
 

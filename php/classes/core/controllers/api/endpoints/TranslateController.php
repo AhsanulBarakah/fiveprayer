@@ -50,7 +50,7 @@ class TranslateController extends RestControllerBase
     {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'fp_prayer_settings_meta';
-        add_action('rest_api_init', [$this, 'register_routes']);
+        // Routes are registered by ApiControllerRegistrar.
     }
 
     public function register_routes(): void

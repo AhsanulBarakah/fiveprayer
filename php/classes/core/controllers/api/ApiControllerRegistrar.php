@@ -16,7 +16,7 @@ class ApiControllerRegistrar
 
     public function register_api_controllers(): void
     {
-        Logger::info('Registering API controllers', 'ApiControllerRegistrar');
+        Logger::debug('Registering API controllers', 'ApiControllerRegistrar');
         
         $controllers = [
             'FivePrayer\Core\Controllers\API\EndPoints\PrayerSettingsMetaController',
@@ -30,7 +30,7 @@ class ApiControllerRegistrar
         foreach ($controllers as &$controller) {
             try {
                 (new $controller())->register_routes();
-                Logger::info('Registered controller: ' . $controller, 'ApiControllerRegistrar');
+                Logger::debug('Registered controller: ' . $controller, 'ApiControllerRegistrar');
             } catch (\Exception $e) {
                 Logger::error('Error registering controller ' . $controller . ': ' . $e->getMessage(), 'ApiControllerRegistrar');
             }
@@ -42,6 +42,6 @@ class ApiControllerRegistrar
         // on every admin / REST request. The one-time purge that clears stale
         // 404 responses after an upgrade lives in Plugin::init(), gated by the
         // same flag that flushes the rewrite rules.
-        Logger::info('All API controllers registered', 'ApiControllerRegistrar');
+        Logger::debug('All API controllers registered', 'ApiControllerRegistrar');
     }
 }

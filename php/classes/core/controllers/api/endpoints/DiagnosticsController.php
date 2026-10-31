@@ -16,11 +16,10 @@ use FivePrayer\Core\Controllers\API\RestControllerBase;
  */
 class DiagnosticsController extends RestControllerBase
 {
-    public function __construct()
-    {
-        add_action('rest_api_init', [$this, 'register_routes']);
-    }
-
+    /**
+     * Routes are registered by ApiControllerRegistrar, the one place that
+     * calls register_routes() on every controller.
+     */
     public function register_routes(): void
     {
         register_rest_route($this->get_namespace(), '/diagnostics/timetable-query', [

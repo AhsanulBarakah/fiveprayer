@@ -848,6 +848,98 @@ fiveprayer_assert('Isha' === $fiveprayer_clean_setting['nested']['label'], 'nest
 fiveprayer_assert(['label', 'count', 'enabled', 'nested'] === array_keys($fiveprayer_clean_setting), 'array keys are kept');
 
 // ---------------------------------------------------------------------------
+// Controller hook registration
+// ---------------------------------------------------------------------------
+
+// Routes are registered by ApiControllerRegistrar only. Controllers that also
+// hooked rest_api_init in their constructor registered every route twice,
+// because Plugin.php instantiated the same controller a second time.
+$fiveprayer_hook_controllers = [
+    new \FivePrayer\Core\Controllers\API\EndPoints\DiagnosticsController(),
+    new PrayerSettingsMetaController(),
+    new \FivePrayer\Core\Controllers\API\EndPoints\PrayerTimeTableController(),
+    new TranslateController(),
+];
+
+foreach ($fiveprayer_hook_controllers as $fiveprayer_hook_controller) {
+    fiveprayer_assert(
+        false === has_action('rest_api_init', [$fiveprayer_hook_controller, 'register_routes']),
+        get_class($fiveprayer_hook_controller) . ' does not register its own rest_api_init callback'
+    );
+}
+
+fiveprayer_assert(false !== has_action('wp_ajax_get_next_prayer'), 'the settings AJAX hooks are registered by Plugin.php');
+
+// The registrar must be the only FivePrayer callback on rest_api_init, and the
+// settings controller must add its AJAX hooks once. Counting route handlers is
+// not reliable here: this test file and other loaded code both fire the hook.
+global $wp_filter;
+
+$fiveprayer_count_callbacks = static function (string $hook, callable $matches): int {
+    global $wp_filter;
+
+    if (!isset($wp_filter[$hook])) {
+        return 0;
+    }
+
+    $count = 0;
+    foreach ($wp_filter[$hook]->callbacks as $callbacks) {
+        foreach ($callbacks as $callback) {
+            if ($matches($callback['function'])) {
+                ++$count;
+            }
+        }
+    }
+
+    return $count;
+};
+
+$fiveprayer_registrar_hooks = $fiveprayer_count_callbacks('rest_api_init', static function ($function) {
+    return is_array($function)
+        && is_object($function[0])
+        && $function[0] instanceof \FivePrayer\Core\Controllers\API\ApiControllerRegistrar;
+});
+
+fiveprayer_assert(1 === $fiveprayer_registrar_hooks, 'ApiControllerRegistrar is the only FivePrayer REST route registrar');
+
+$fiveprayer_ajax_hooks = $fiveprayer_count_callbacks('wp_ajax_get_next_prayer', static function ($function) {
+    return is_array($function) && isset($function[1]) && 'get_next_prayer' === $function[1];
+});
+
+fiveprayer_assert(1 === $fiveprayer_ajax_hooks, 'the next-prayer AJAX hook is registered exactly once');
+
+// ---------------------------------------------------------------------------
+// Settings save error handling
+// ---------------------------------------------------------------------------
+
+// sanitizeSettingValue() is typed `string $meta_key`, so a non-string meta used
+// to throw a TypeError. `catch (Exception)` did not catch it and the request
+// answered 500 instead of 400.
+$fiveprayer_bad_meta_request = new WP_REST_Request('POST', '/fiveprayer/v1/fp_prayersettings_meta');
+$fiveprayer_bad_meta_request->set_header('Content-Type', 'application/json');
+$fiveprayer_bad_meta_request->set_body(wp_json_encode(['meta' => ['not-a-key'], 'value' => 'x']));
+
+$fiveprayer_bad_meta_response = $fiveprayer_settings_controller->store_settings($fiveprayer_bad_meta_request);
+$fiveprayer_bad_meta_status   = $fiveprayer_bad_meta_response instanceof WP_Error
+    ? (int) ($fiveprayer_bad_meta_response->get_error_data()['status'] ?? 0)
+    : 0;
+
+fiveprayer_assert(400 === $fiveprayer_bad_meta_status, 'a save with a non-string meta answers 400 instead of throwing');
+
+// JSON keys that look numeric become int keys in PHP; the batch route must
+// report them and keep going, not hit the same TypeError.
+$fiveprayer_batch_request = new WP_REST_Request('POST', '/fiveprayer/v1/fp_prayersettings_meta/batch');
+$fiveprayer_batch_request->set_header('Content-Type', 'application/json');
+$fiveprayer_batch_request->set_body(wp_json_encode(['settings' => [0 => 'value']]));
+
+$fiveprayer_batch_response = $fiveprayer_settings_controller->store_settings_batch($fiveprayer_batch_request)->get_data();
+
+fiveprayer_assert(
+    isset($fiveprayer_batch_response['errors'][0]) && [] === $fiveprayer_batch_response['saved'],
+    'a batch save with a numeric setting name reports an error instead of saving it'
+);
+
+// ---------------------------------------------------------------------------
 // Public settings response
 // ---------------------------------------------------------------------------
 

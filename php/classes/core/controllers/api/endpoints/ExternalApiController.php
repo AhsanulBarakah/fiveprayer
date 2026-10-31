@@ -231,7 +231,7 @@ class ExternalApiController extends RestControllerBase
             ],
         ]);
 
-        Logger::info('External API routes registered successfully', 'ExternalApiController');
+        Logger::debug('External API routes registered successfully', 'ExternalApiController');
     }
 
     public function test_endpoint(WP_REST_Request $request)

@@ -68,8 +68,8 @@ class PrayerSettingsMetaController extends RestControllerBase
     {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'fp_prayer_settings_meta';
-        add_action('rest_api_init', [$this, 'register_routes']);
-        $this->register_hooks();
+        // Hooks are registered explicitly: ApiControllerRegistrar owns route
+        // registration, and Plugin.php calls register_hooks() once for AJAX.
     }
 
     public function register_routes(): void
@@ -115,7 +115,16 @@ class PrayerSettingsMetaController extends RestControllerBase
             }
 
             $meta_key = $data['meta'];
-            $value    = $this->sanitizeSettingValue($data['meta'], $data['value']);
+
+            // The validator is typed `string $meta_key`; a JSON array or number
+            // used to throw a TypeError, which `catch (Exception)` does not
+            // catch and which the client saw as a 500.
+            if (!is_string($meta_key) || '' === trim($meta_key)) {
+                SecurityHelper::log_security_event('Invalid settings format: meta must be a non-empty string', 'error');
+                return new WP_Error('invalid_meta_key', 'The meta field must be a non-empty string', ['status' => 400]);
+            }
+
+            $value = $this->sanitizeSettingValue($meta_key, $data['value']);
 
             $result = $this->upsertSetting($meta_key, $value);
 
@@ -126,9 +135,10 @@ class PrayerSettingsMetaController extends RestControllerBase
             }
 
             return rest_ensure_response($result);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             SecurityHelper::log_security_event('Error storing setting: ' . $e->getMessage(), 'error');
-            return new WP_Error('internal_error', 'Error saving setting: ' . $e->getMessage(), ['status' => 500]);
+            // The reason stays in the log; the client gets a generic message.
+            return new WP_Error('internal_error', 'Error saving setting', ['status' => 500]);
         }
     }
 
@@ -148,6 +158,13 @@ class PrayerSettingsMetaController extends RestControllerBase
             $errors = [];
 
             foreach ($settings as $meta_key => $value) {
+                // JSON object keys that look numeric become int keys in PHP, and
+                // the validator only accepts strings.
+                if (!is_string($meta_key) || '' === trim($meta_key)) {
+                    $errors[(string) $meta_key] = 'Setting names must be non-empty strings';
+                    continue;
+                }
+
                 try {
                     $value = $this->sanitizeSettingValue($meta_key, $value);
 
@@ -159,8 +176,9 @@ class PrayerSettingsMetaController extends RestControllerBase
                     if ('oaac_selected' === $meta_key) {
                         $this->enable_asr2_column_for_combined_asr($value);
                     }
-                } catch (Exception $e) {
-                    $errors[$meta_key] = $e->getMessage();
+                } catch (\Throwable $e) {
+                    SecurityHelper::log_security_event('Error storing setting "' . $meta_key . '": ' . $e->getMessage(), 'error');
+                    $errors[$meta_key] = 'This setting could not be saved';
                 }
             }
 
@@ -169,9 +187,9 @@ class PrayerSettingsMetaController extends RestControllerBase
                 'saved' => $saved,
                 'errors' => $errors,
             ]);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             SecurityHelper::log_security_event('Error in batch save: ' . $e->getMessage(), 'error');
-            return new WP_Error('internal_error', 'Error in batch save: ' . $e->getMessage(), ['status' => 500]);
+            return new WP_Error('internal_error', 'Error in batch save', ['status' => 500]);
         }
     }
 
