@@ -21,7 +21,6 @@
   "files": [
     "build-admin",
     "build-blocks",
-    "client-sdk",
     "php",
     "vendor",
     "languages",

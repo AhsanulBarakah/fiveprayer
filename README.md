@@ -70,7 +70,6 @@ The preview downloads the asset straight from the Releases page, so it always ru
 * API Management
 * API Security
 * Import, export and reset settings
-* Optional anonymous usage telemetry (opt-in)
 * Page builder support
 * Gutenberg blocks
 * Caching plugin compatibility
@@ -124,7 +123,7 @@ An opt-in full-screen display for a mosque TV. See **changelog.txt**.
 Yes. See **changelog.txt**.
 
 = Does it collect any data? =
-Only with explicit administrator opt-in.
+No. The plugin sends no data anywhere — not to us, not to any third party.
 
 == Screenshots ==
 FivePrayer 3.0.0 on WordPress 7.1.4, captured in WordPress Playground, in the order you meet them. One image per line.

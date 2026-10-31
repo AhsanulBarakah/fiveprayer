@@ -3,8 +3,8 @@
 # Everything listed here is development-only and is NOT part of the released
 # plugin. The production package is defined by the "files" field in
 # package.json and contains only:
-#   build-admin/  build-blocks/  client-sdk/  php/  vendor/  languages/
-#   Fiveprayer.php  index.php  README.md  changelog.txt  LICENSE.txt
+#   build-admin/  build-blocks/  php/  vendor/  languages/
+#   Fiveprayer.php  uninstall.php  index.php  README.md  changelog.txt  LICENSE.txt
 #
 # Enable this file on the check screen:
 #   Tools -> Plugin Check -> tick "Use .pcpignore custom exclusions"

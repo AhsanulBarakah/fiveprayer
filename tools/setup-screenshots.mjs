@@ -104,24 +104,6 @@ const shot = async (name, step) => {
   log(step, `saved screenshots/${name}`);
 };
 
-/**
- * The plugin's telemetry consent modal covers the page until answered.
- * Answer "No thanks" via a synthetic click (the overlay intercepts pointer
- * events) and drop any leftover overlay so it stays out of the screenshots.
- */
-const dismissConsent = async () => {
-  const handled = await page.evaluate(() => {
-    const buttons = document.querySelectorAll('[data-ifiiri-consent="no"]');
-    buttons.forEach((button) => button.click());
-    document.querySelectorAll('.ifiiri-modal, .ifiiri-modal__backdrop').forEach((el) => el.remove());
-    return buttons.length;
-  });
-  if (handled) {
-    await page.waitForTimeout(500);
-    log('consent', `answered "No thanks" (${handled} prompt)`);
-  }
-};
-
 /** Open one of the custom dropdowns in a card and return its popup list. */
 const openDropdown = async (label) => {
   const box = page
@@ -174,7 +156,6 @@ try {
   // --- 1. Settings > General: timezone ---------------------------------
   await page.goto(`${BASE}/wp-admin/options-general.php`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#timezone_string', { timeout: 120_000 });
-  await dismissConsent();
   await page.selectOption('#timezone_string', 'Europe/London');
   await Promise.all([
     page.waitForLoadState('domcontentloaded'),
@@ -209,7 +190,6 @@ try {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector('input[name="country"]', { timeout: 120_000 });
-  await dismissConsent();
   // Reruns reuse the location already saved, so the list never doubles up.
   const alreadySaved = await page.getByText(/\d+ locations? saved/).innerText();
   if (alreadySaved.startsWith('0')) {
@@ -231,7 +211,6 @@ try {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector('text=Prayer Settings', { timeout: 120_000 });
-  await dismissConsent();
 
   await pickOption('Location, City', 'United Kingdom - London');
   await pickOption('Month', 'October');
@@ -290,7 +269,6 @@ try {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector('text=/Fajr/i', { timeout: 120_000 });
-  await dismissConsent();
   await page.waitForTimeout(1500);
   await shot('setup-05-timetable.png', 'step 5');
 } catch (error) {

@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Function fiveprayer_ifiiri_endpoint\(\) never returns null so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: Fiveprayer.php
-
-		-
 			message: '#^Function fiveprayer_check_for_updates\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1

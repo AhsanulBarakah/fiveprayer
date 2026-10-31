@@ -43,6 +43,9 @@ foreach ($fiveprayer_tables as $fiveprayer_table) {
 //    setting added later is cleaned up without touching this file.
 $fiveprayer_option_patterns = [
     $wpdb->esc_like('fiveprayer_') . '%',
+    // Leftovers of the telemetry SDK that used to be bundled, for a site that
+    // opted in before it was removed.
+    $wpdb->esc_like('ifiiri_fiveprayer_') . '%',
     $wpdb->esc_like('_transient_fiveprayer_') . '%',
     $wpdb->esc_like('_transient_timeout_fiveprayer_') . '%',
     $wpdb->esc_like('_transient_fp_rate_') . '%',
@@ -59,6 +62,8 @@ $fiveprayer_crons = [
     'fiveprayer_hourly_cache_check',
     'fiveprayer_twice_daily_cache_check',
     'fiveprayer_check_next_prayer_change',
+    // The removed telemetry SDK's shared heartbeat.
+    'ifiiri_sdk_heartbeat',
 ];
 
 foreach ($fiveprayer_crons as $fiveprayer_cron) {

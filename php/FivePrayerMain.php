@@ -182,6 +182,43 @@ function fiveprayer_maybe_add_asr_second_begins_column() {
 add_action('init', 'fiveprayer_maybe_add_asr_second_begins_column', 20);
 
 /**
+ * One-time cleanup of the removed telemetry SDK's state.
+ *
+ * The bundled iFiiri client SDK stored a handful of options and a daily
+ * heartbeat event. The SDK no longer ships, but a site that ran it keeps those
+ * rows and the job forever, so they are removed once and a flag records it.
+ */
+function fiveprayer_remove_legacy_telemetry_state() {
+    // Autoloaded flag: once handled, this is a no-op and costs no query.
+    if (get_option('fiveprayer_telemetry_removed')) {
+        return;
+    }
+
+    // Every option the SDK stored for this product (its slug was `fiveprayer`).
+    $fiveprayer_legacy_options = [
+        'ifiiri_fiveprayer_consent',
+        'ifiiri_fiveprayer_install_id',
+        'ifiiri_fiveprayer_last_sync',
+        'ifiiri_fiveprayer_license_status',
+        'ifiiri_fiveprayer_notice',
+        'ifiiri_fiveprayer_auth_mode',
+        'ifiiri_fiveprayer_queue',
+        'ifiiri_fiveprayer_delivery',
+        'ifiiri_fiveprayer_endpoint_override',
+    ];
+
+    foreach ($fiveprayer_legacy_options as $fiveprayer_option) {
+        delete_option($fiveprayer_option);
+    }
+
+    // The SDK's shared daily heartbeat, which also flushed its retry queue.
+    wp_clear_scheduled_hook('ifiiri_sdk_heartbeat');
+
+    update_option('fiveprayer_telemetry_removed', 1);
+}
+add_action('init', 'fiveprayer_remove_legacy_telemetry_state', 20);
+
+/**
  * Get the current plugin version.
  */
 function fiveprayer_get_plugin_version() {
