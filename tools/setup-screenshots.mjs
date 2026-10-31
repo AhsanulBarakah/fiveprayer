@@ -81,11 +81,20 @@ const browser = await chromium.launch({
     ? { executablePath: process.env.CHROME_PATH }
     : { channel: 'chrome' }),
 });
-const page = await browser.newPage({ viewport: VIEWPORT });
-// PHP-WASM answers the first request of each page slowly; give every
-// navigation and locator well over Playwright's 30s default.
-page.setDefaultTimeout(120_000);
-page.setDefaultNavigationTimeout(240_000);
+/**
+ * A page with PHP-WASM-sized timeouts. Playground answers the first request of
+ * each page slowly and browser.newPage() starts every page on Playwright's 30s
+ * default, so the admin page and the about page that reports the version both
+ * need the longer limits.
+ */
+const newAdminPage = async () => {
+  const fresh = await browser.newPage({ viewport: VIEWPORT });
+  fresh.setDefaultTimeout(120_000);
+  fresh.setDefaultNavigationTimeout(240_000);
+  return fresh;
+};
+
+const page = await newAdminPage();
 
 let wordpressVersion = 'unknown';
 
@@ -152,8 +161,11 @@ try {
     log('login', 'signed in with the CLI defaults');
   }
 
-  const about = await browser.newPage({ viewport: VIEWPORT });
-  await about.goto(`${BASE}/wp-admin/about.php`, { waitUntil: 'domcontentloaded' });
+  const about = await newAdminPage();
+  await about.goto(`${BASE}/wp-admin/about.php`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 180_000,
+  });
   const version = (await about.locator('body').innerText()).match(/Version\s+([0-9][0-9.]*)/i);
   wordpressVersion = version ? version[1] : 'unknown';
   log('version', `WordPress ${wordpressVersion}`);
@@ -170,12 +182,26 @@ try {
   ]);
   await page.waitForSelector('text=Settings saved', { timeout: 60_000 });
   log('timezone', 'Europe/London saved');
-  // The timezone row sits below the fold at 1440x900; scroll it into view so
-  // the capture shows the setting the caption names, not the site title.
-  await page.evaluate(() => {
-    const row = document.querySelector('#timezone_string')?.closest('tr');
-    row?.scrollIntoView({ block: 'center' });
-  });
+  // The timezone row sits below the fold at 1440x900. The reload restores the
+  // previous scroll position, which can land back at the top, so scroll until
+  // the field is really on screen instead of scrolling once and hoping.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    // Centre the row rather than nudging the field into view: Playwright counts
+    // a half-visible element as visible, which leaves the select cut off at the
+    // bottom edge of the capture.
+    await page.evaluate(() => {
+      const row = document.querySelector('#timezone_string')?.closest('tr');
+      row?.scrollIntoView({ block: 'center' });
+    });
+    const onScreen = await page.evaluate(() => {
+      const field = document.querySelector('#timezone_string');
+      if (!field) return false;
+      const box = field.getBoundingClientRect();
+      return box.top >= 0 && box.bottom <= window.innerHeight;
+    });
+    if (onScreen) break;
+    await page.waitForTimeout(500);
+  }
   await shot('setup-01-timezone.png', 'step 1');
 
   // --- 2. Customizing > Location ---------------------------------------
@@ -229,6 +255,13 @@ try {
     await page.waitForTimeout(1000);
     log('settings', 'month saved');
   }
+  // The "Month updated" toast lands over the admin bar; let it fade so the
+  // capture shows the settings rather than a floating notice.
+  await page
+    .locator('[data-sonner-toast]')
+    .last()
+    .waitFor({ state: 'detached', timeout: 15_000 })
+    .catch(() => {});
   log('settings', 'Prayer Settings filled in');
   await shot('setup-03-prayer-settings.png', 'step 3');
 
