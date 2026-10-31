@@ -62,11 +62,9 @@ class PrayerSettingsMetaController extends RestControllerBase
             'permission_callback' => '__return_true',
         ]);
 
-        register_rest_route($this->get_namespace(), '/fp_get_next_prayer', [
-            'methods' => 'GET',
-            'callback' => [$this, 'get_next_prayer'],
-            'permission_callback' => '__return_true',
-        ]);
+        // No `/fp_get_next_prayer` REST route: its callback checks an AJAX
+        // nonce, which a REST request never carries, so the route could only
+        // ever answer an error. The front end calls the wp_ajax hooks below.
     }
 
     public function check_permission()
@@ -324,6 +322,8 @@ class PrayerSettingsMetaController extends RestControllerBase
     }
 
     public function register_hooks() {
+        // The AJAX route is the only one for the next prayer: it is public data
+        // and the nonce check below is what the front end actually sends.
         add_action('wp_ajax_get_next_prayer', [$this, 'get_next_prayer']);
         add_action('wp_ajax_nopriv_get_next_prayer', [$this, 'get_next_prayer']);
         add_action('wp_ajax_fiveprayer_load_timetable', [$this, 'load_timetable']);
