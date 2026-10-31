@@ -226,7 +226,7 @@ class PrayerTimeTableController extends RestControllerBase
             return false;
         }
 
-        return 'InnoDB' === strtoupper((string) $status->Engine);
+        return 'INNODB' === strtoupper((string) $status->Engine);
     }
 
     private function sanitize_data(array $prayer): array

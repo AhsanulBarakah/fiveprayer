@@ -1093,18 +1093,6 @@ parameters:
 			path: php/classes/core/Assets/ScriptLocalizationManager.php
 
 		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\Blocks\\Exception\.$#'
-			identifier: class.notFound
-			count: 1
-			path: php/classes/core/Blocks/BlockRegistrar.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\Blocks\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: php/classes/core/Blocks/BlockRegistrar.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Blocks\\BlockRegistrar\:\:fiveprayer_filter_block_categories\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -2233,18 +2221,6 @@ parameters:
 			path: php/classes/core/PathService.php
 
 		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\Exception\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/Plugin.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/Plugin.php
-
-		-
 			message: '#^Comparison operation "\>" between 1 and 0 is always true\.$#'
 			identifier: greater.alwaysTrue
 			count: 2
@@ -2725,18 +2701,6 @@ parameters:
 			path: php/classes/core/ShortCodes/Managers/StyleManager.php
 
 		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\ShortCodes\\Managers\\Exception\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/ShortCodes/Managers/TranslationManager.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\ShortCodes\\Managers\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/ShortCodes/Managers/TranslationManager.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\ShortCodes\\Managers\\TranslationManager\:\:__construct\(\) has parameter \$activeLanguage with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -3193,18 +3157,6 @@ parameters:
 			path: php/classes/core/ShortCodes/ShortCodeVerticalDailyPrayer.php
 
 		-
-			message: '#^Call to method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:clear_prayer_transients\(\) on a separate line has no effect\.$#'
-			identifier: method.resultUnused
-			count: 1
-			path: php/classes/core/ShortCodes/ShortCodesSinglePrayers.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:clear_prayer_transients\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/ShortCodes/ShortCodesSinglePrayers.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:getInstance\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -3231,18 +3183,6 @@ parameters:
 		-
 			message: '#^Method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:isBuilderEditing\(\) is unused\.$#'
 			identifier: method.unused
-			count: 1
-			path: php/classes/core/ShortCodes/ShortCodesSinglePrayers.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:update_prayer_times\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/ShortCodes/ShortCodesSinglePrayers.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\ShortCodes\\ShortCodesSinglePrayers\:\:update_prayer_times\(\) has parameter \$post_id with no type specified\.$#'
-			identifier: missingType.parameter
 			count: 1
 			path: php/classes/core/ShortCodes/ShortCodesSinglePrayers.php
 
@@ -4063,12 +4003,6 @@ parameters:
 			path: php/classes/core/controllers/api/endpoints/PrayerTimeTableController.php
 
 		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\PrayerTimeTableController\:\:purge_external_caches\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/PrayerTimeTableController.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\PrayerTimeTableController\:\:sanitize_data\(\) has parameter \$prayer with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -4118,12 +4052,6 @@ parameters:
 
 		-
 			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\TranslateController\:\:get_translations\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/TranslateController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\TranslateController\:\:purge_external_caches\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: php/classes/core/controllers/api/endpoints/TranslateController.php
@@ -4427,18 +4355,6 @@ parameters:
 			identifier: missingType.property
 			count: 1
 			path: php/classes/core/database/SchemaSetup.php
-
-		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\Database\\Exception\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/database/Translate.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\Database\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 2
-			path: php/classes/core/database/Translate.php
 
 		-
 			message: '#^Method FivePrayer\\Core\\Database\\Translate\:\:__construct\(\) has parameter \$language_code with no type specified\.$#'
@@ -6631,18 +6547,6 @@ parameters:
 			path: php/classes/core/helpers/TimeToEnglish.php
 
 		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\Helpers\\Exception\.$#'
-			identifier: class.notFound
-			count: 1
-			path: php/classes/core/helpers/TimeToEnglish.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\Helpers\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: php/classes/core/helpers/TimeToEnglish.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Helpers\\TimeToEnglish\:\:convertArabicToEnglishDigits\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -6701,18 +6605,6 @@ parameters:
 			identifier: function.impossibleType
 			count: 1
 			path: php/classes/core/helpers/Traits/TimetableDataTrait.php
-
-		-
-			message: '#^Call to method getMessage\(\) on an unknown class FivePrayer\\Core\\Helpers\\Exception\.$#'
-			identifier: class.notFound
-			count: 4
-			path: php/classes/core/helpers/Validator.php
-
-		-
-			message: '#^Caught class FivePrayer\\Core\\Helpers\\Exception not found\.$#'
-			identifier: class.notFound
-			count: 4
-			path: php/classes/core/helpers/Validator.php
 
 		-
 			message: '#^Method FivePrayer\\Core\\Helpers\\Validator\:\:customLocationDelete\(\) has no return type specified\.$#'

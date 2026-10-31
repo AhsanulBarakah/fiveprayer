@@ -33,10 +33,6 @@ class DynamicTextParser {
         // or a script is never replaced with rendered shortcode HTML.
         $chunks = wp_html_split($content);
 
-        if (!is_array($chunks)) {
-            return $content;
-        }
-
         $pattern       = '/\bfp_([a-zA-Z_0-9]+)\b/';
         $skip_elements = ['script', 'style', 'textarea', 'code', 'pre'];
         $open_skipped  = [];
