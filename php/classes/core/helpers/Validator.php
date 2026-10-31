@@ -25,7 +25,7 @@ if (!class_exists('Validator')) {
                     SecurityHelper::log_security_event('Monthly number invalid, using current month', 'warning');
                     return wp_date('n', null, $timezone = null);
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error validating monthly number: ' . $e->getMessage(), 'error');
                 return wp_date('n', null, $timezone = null);
             }
@@ -48,7 +48,7 @@ if (!class_exists('Validator')) {
                     SecurityHelper::log_security_event('Custom location insert invalid', 'warning');
                     return false;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error validating custom location insert: ' . $e->getMessage(), 'error');
                 return false;
             }
@@ -72,7 +72,7 @@ if (!class_exists('Validator')) {
                     SecurityHelper::log_security_event('Custom location update invalid', 'warning');
                     return false;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error validating custom location update: ' . $e->getMessage(), 'error');
                 return false;
             }
@@ -92,7 +92,7 @@ if (!class_exists('Validator')) {
                     SecurityHelper::log_security_event('Custom location delete invalid', 'warning');
                     return false;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error validating custom location delete: ' . $e->getMessage(), 'error');
                 return false;
             }

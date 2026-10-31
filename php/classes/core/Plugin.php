@@ -190,7 +190,7 @@ class Plugin
         try {
             (new ApiAdmin());
             Logger::debug('API Management submenu page is now enabled and visible in admin menu', 'Plugin');
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             Logger::error('Error initializing ApiAdmin: ' . $e->getMessage(), 'Plugin');
         }
 
@@ -279,7 +279,7 @@ class Plugin
             if ($started_buffer && ob_get_level() > 0) {
                 ob_end_clean();
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             Logger::error('Activation error: ' . $e->getMessage(), 'Plugin');
             // Make sure to clean the output buffer if an error occurs
             if ($started_buffer && ob_get_level() > 0) {

@@ -150,7 +150,7 @@ if ( ! class_exists( 'Translate' ) ) {
 
                 SecurityHelper::log_security_event('No translation found', 'info');
                 return null;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error getting translation: ' . $e->getMessage(), 'error');
                 return null;
             }
@@ -210,7 +210,7 @@ if ( ! class_exists( 'Translate' ) ) {
 
                 SecurityHelper::log_security_event('Translation stored successfully', 'info');
                 return true;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 SecurityHelper::log_security_event('Error storing translation: ' . $e->getMessage(), 'error');
                 return false;
             }

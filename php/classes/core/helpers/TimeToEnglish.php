@@ -40,7 +40,7 @@ class TimeToEnglish {
                 $englishHour . ':' . $englishMinute . ' ' . $englishPeriod
             );
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             Logger::error('Time conversion error: ' . $e->getMessage(), 'TimeToEnglish');
             return false;
         }

@@ -59,7 +59,7 @@ class TranslationManager {
                 }
             }
             return esc_html($prayerKey);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             SecurityHelper::log_security_event('Error in getTranslatedPrayerName: ' . $e->getMessage(), 'error');
             return '';
         }
@@ -137,7 +137,7 @@ class TranslationManager {
             }
 
             return esc_html($key);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             SecurityHelper::log_security_event('Error in getTranslatedLabel: ' . $e->getMessage(), 'error');
             return esc_html($key);
         }

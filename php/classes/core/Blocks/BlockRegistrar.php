@@ -85,7 +85,7 @@ class BlockRegistrar
                         ob_start();
                         include $render_path;
                         return ob_get_clean();
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         Logger::error("Error rendering block " . $block_name . ": " . $e->getMessage(), 'BlockRegistrar');
                         return '<!-- FivePrayer Block Error -->';
                     }
