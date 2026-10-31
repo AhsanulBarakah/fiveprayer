@@ -9,6 +9,7 @@ use WP_Error;
 use FivePrayer\Core\Helpers\Validator;
 use FivePrayer\Core\Controllers\API\RestControllerBase;
 use FivePrayer\Core\Helpers\PrayerDataCache;
+use FivePrayer\Core\Logging\Logger;
 
 class PrayerTimeTableController extends RestControllerBase
 {
@@ -66,13 +67,64 @@ class PrayerTimeTableController extends RestControllerBase
             return new WP_Error('invalid_json', 'Invalid JSON', ['status' => 400]);
         }
 
-        $wpdb->query($wpdb->prepare("TRUNCATE TABLE %i", $this->table_name)); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        // Validate and sanitise every row before the live table is touched, so
+        // a malformed payload can never empty it or leave it half written.
+        if (empty($data)) {
+            return new WP_Error('empty_timetable', 'The timetable payload is empty', ['status' => 400]);
+        }
 
-        foreach ($data as &$prayer) {
-            $result = $wpdb->insert($this->table_name, $this->sanitize_data($prayer)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-            if ($result === false) {
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        $rows = [];
+        foreach ($data as $prayer) {
+            if (!is_array($prayer)) {
+                return new WP_Error('invalid_row', 'Every timetable row must be an object', ['status' => 400]);
             }
+
+            $rows[] = $this->sanitize_data($prayer);
+        }
+
+        // TRUNCATE commits implicitly in MySQL and cannot be rolled back, so an
+        // InnoDB table is replaced with a transactional DELETE instead.
+        $use_transaction = $this->table_supports_transactions();
+
+        if ($use_transaction) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+            $wpdb->query('START TRANSACTION');
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared -- Table name is prepared with %i.
+            $replaced = $wpdb->query($wpdb->prepare('DELETE FROM %i', $this->table_name));
+        } else {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared -- Table name is prepared with %i.
+            $replaced = $wpdb->query($wpdb->prepare('TRUNCATE TABLE %i', $this->table_name));
+        }
+
+        if (false === $replaced) {
+            if ($use_transaction) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+                $wpdb->query('ROLLBACK');
+            }
+
+            Logger::error('Could not clear the timetable: ' . $wpdb->last_error, 'PrayerTimeTableController');
+            return new WP_Error('db_error', 'The timetable could not be saved', ['status' => 500]);
+        }
+
+        foreach ($rows as $row) {
+            $result = $wpdb->insert($this->table_name, $row); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+            if (false === $result) {
+                if ($use_transaction) {
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+                    $wpdb->query('ROLLBACK');
+                }
+
+                // The database message can name tables, columns or SQL; only
+                // the log keeps it.
+                Logger::error('Could not insert a timetable row: ' . $wpdb->last_error, 'PrayerTimeTableController');
+                return new WP_Error('db_error', 'The timetable could not be saved', ['status' => 500]);
+            }
+        }
+
+        if ($use_transaction) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+            $wpdb->query('COMMIT');
         }
 
         // Every cached timetable row is stale now. Dynamic keys are dropped by
@@ -152,6 +204,29 @@ class PrayerTimeTableController extends RestControllerBase
         $formatted = $this->convert_times_to_12h($formatted);
         
         return rest_ensure_response($formatted);
+    }
+
+    /**
+     * Whether the timetable table supports transactions.
+     *
+     * The replace above uses DELETE + INSERT in a transaction on InnoDB, which
+     * can be rolled back when an insert fails. MyISAM and other engines cannot,
+     * so they keep the TRUNCATE path.
+     *
+     * @return bool
+     */
+    private function table_supports_transactions(): bool
+    {
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema probe, once per save.
+        $status = $wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS LIKE %s', $this->table_name));
+
+        if (!$status || !isset($status->Engine)) {
+            return false;
+        }
+
+        return 'InnoDB' === strtoupper((string) $status->Engine);
     }
 
     private function sanitize_data(array $prayer): array

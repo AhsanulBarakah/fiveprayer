@@ -715,6 +715,64 @@ if ('' !== $fiveprayer_request['error']) {
     );
 }
 
+// ── 5. A malformed timetable replace never touches the live table ──────────
+global $wpdb;
+
+$fiveprayer_timetable_controller = new \FivePrayer\Core\Controllers\API\EndPoints\PrayerTimeTableController();
+$fiveprayer_timetable_table      = $wpdb->prefix . 'fp_timetable';
+
+/**
+ * Number of rows currently in the live timetable.
+ *
+ * @return int
+ */
+function fiveprayer_month_timetable_rows() {
+    global $wpdb;
+
+    return (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i', $wpdb->prefix . 'fp_timetable')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- test probes the real row count.
+}
+
+/**
+ * Status of a WP_Error result, or 0 when the call succeeded.
+ *
+ * @param mixed $result Return value of insert_timetable().
+ * @return int
+ */
+function fiveprayer_month_error_status($result) {
+    if (!($result instanceof WP_Error)) {
+        return 0;
+    }
+
+    $data = $result->get_error_data();
+
+    return is_array($data) && isset($data['status']) ? (int) $data['status'] : 0;
+}
+
+$fiveprayer_rows_before = fiveprayer_month_timetable_rows();
+
+$fiveprayer_empty_payload = new WP_REST_Request('POST', '/fiveprayer/v1/fp_prayertimetable');
+$fiveprayer_empty_payload->set_header('Content-Type', 'application/json');
+$fiveprayer_empty_payload->set_body(wp_json_encode([]));
+
+fiveprayer_month_assert(
+    400 === fiveprayer_month_error_status($fiveprayer_timetable_controller->insert_timetable($fiveprayer_empty_payload)),
+    'an empty timetable payload is rejected with 400'
+);
+
+$fiveprayer_bad_row_payload = new WP_REST_Request('POST', '/fiveprayer/v1/fp_prayertimetable');
+$fiveprayer_bad_row_payload->set_header('Content-Type', 'application/json');
+$fiveprayer_bad_row_payload->set_body(wp_json_encode(['not-a-row']));
+
+fiveprayer_month_assert(
+    400 === fiveprayer_month_error_status($fiveprayer_timetable_controller->insert_timetable($fiveprayer_bad_row_payload)),
+    'a non-object timetable row is rejected with 400'
+);
+
+fiveprayer_month_assert(
+    $fiveprayer_rows_before === fiveprayer_month_timetable_rows(),
+    'a rejected payload leaves the live timetable untouched'
+);
+
 echo $fiveprayer_month_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_month_failures} check(s)\n")
     : esc_html("\nPASS: all timetable month checks\n");
