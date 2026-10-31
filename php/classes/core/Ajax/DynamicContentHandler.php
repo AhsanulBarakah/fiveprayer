@@ -2,6 +2,7 @@
 namespace FivePrayer\Core\Ajax;
 
 use FivePrayer\Core\Helpers\PrayerDataCache;
+use FivePrayer\Core\Helpers\PrayerFieldMap;
 
 defined('ABSPATH') || exit;
 
@@ -170,42 +171,14 @@ class DynamicContentHandler {
             return ['error' => 'No prayer times available'];
         }
         
-        // Map field to prayer time property
-        $field_mapping = [
-            'fajr_begins_time' => 'fajr_begins',
-            'fajr_iqamah_time' => 'fajr_iqamah',
-            'dhuhr_begins_time' => 'dhuhr_begins',
-            'dhuhr_iqamah_time' => 'dhuhr_iqamah',
-            'asr_begins_time' => 'asr_begins',
-            'asr_second_begins_time' => 'asr_second_begins',
-            'asr_iqamah_time' => 'asr_iqamah',
-            'maghrib_begins_time' => 'maghrib_begins',
-            'maghrib_iqamah_time' => 'maghrib_iqamah',
-            'isha_begins_time' => 'isha_begins',
-            'isha_iqamah_time' => 'isha_iqamah',
-            'sunrise_begins_time' => 'sunrise',
-            'midnight_begins_time' => 'midnight',
-            // Identity aliases emitted by the dynamic-content placeholders
-            // (DynamicContent\Traits\PrayerTimeContentTrait).
-            'fajr_begins' => 'fajr_begins',
-            'fajr_iqamah' => 'fajr_iqamah',
-            'dhuhr_begins' => 'dhuhr_begins',
-            'dhuhr_iqamah' => 'dhuhr_iqamah',
-            'asr_begins' => 'asr_begins',
-            'asr_second_begins' => 'asr_second_begins',
-            'asr_iqamah' => 'asr_iqamah',
-            'maghrib_begins' => 'maghrib_begins',
-            'maghrib_iqamah' => 'maghrib_iqamah',
-            'isha_begins' => 'isha_begins',
-            'isha_iqamah' => 'isha_iqamah',
-            'sunrise' => 'sunrise',
-            'midnight' => 'midnight',
-        ];
-        
-        // Only the fields this endpoint advertises are accepted. Using the
-        // request value as a property name allowed a caller to probe arbitrary
-        // (including private) properties of the timetable row.
-        if (!isset($field_mapping[$field])) {
+        // The allowlist lives in PrayerFieldMap so this endpoint and the ESI
+        // renderer cannot drift apart. Only the fields this endpoint advertises
+        // are accepted: using the request value as a property name allowed a
+        // caller to probe arbitrary (including private) properties of the
+        // timetable row.
+        $property = PrayerFieldMap::getProperty($field);
+
+        if (null === $property) {
             return [
                 'field' => $field,
                 'time' => '',
@@ -213,7 +186,6 @@ class DynamicContentHandler {
             ];
         }
 
-        $property = $field_mapping[$field];
         $time = $today_prayer_times->$property ?? '';
         
         return [

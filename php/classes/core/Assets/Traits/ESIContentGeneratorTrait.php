@@ -4,6 +4,7 @@ namespace FivePrayer\Core\Assets\Traits;
 
 defined('ABSPATH') || exit;
 
+use FivePrayer\Core\Helpers\PrayerFieldMap;
 use FivePrayer\Core\Security\SecurityHelper;
 
 trait ESIContentGeneratorTrait
@@ -209,23 +210,14 @@ trait ESIContentGeneratorTrait
             return 'Time unavailable';
         }
 
-        $field_mapping = [
-            'fajr_begins_time' => 'fajr_begins',
-            'fajr_iqamah_time' => 'fajr_iqamah',
-            'dhuhr_begins_time' => 'dhuhr_begins',
-            'dhuhr_iqamah_time' => 'dhuhr_iqamah',
-            'asr_begins_time' => 'asr_begins',
-            'asr_second_begins_time' => 'asr_second_begins',
-            'asr_iqamah_time' => 'asr_iqamah',
-            'maghrib_begins_time' => 'maghrib_begins',
-            'maghrib_iqamah_time' => 'maghrib_iqamah',
-            'isha_begins_time' => 'isha_begins',
-            'isha_iqamah_time' => 'isha_iqamah',
-            'sunrise_begins_time' => 'sunrise',
-            'midnight_begins_time' => 'midnight',
-        ];
+        // Shared allowlist with DynamicContentHandler: an unknown field is
+        // answered without reading any property of the timetable row.
+        $property = PrayerFieldMap::getProperty($field);
 
-        $property = $field_mapping[$field] ?? $field;
+        if (null === $property) {
+            return 'Time unavailable';
+        }
+
         $time = $today_prayer_times->$property ?? 'Time unavailable';
 
         return '<span class="fiveprayer-single-prayer-esi" data-field="' . esc_attr($field) . '">' . esc_html($time) . '</span>';

@@ -35,6 +35,7 @@ defined('ABSPATH') || exit;
 use FivePrayer\Core\API\ApiKeyManager;
 use FivePrayer\Core\Assets\ESIDynamicContentHandler;
 use FivePrayer\Core\Controllers\API\EndPoints\TranslateController;
+use FivePrayer\Core\Helpers\PrayerFieldMap;
 use FivePrayer\Core\Logging\Logger;
 use FivePrayer\Core\Security\SecurityHelper;
 
@@ -526,6 +527,26 @@ fiveprayer_assert(
 );
 
 fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
+
+// ---------------------------------------------------------------------------
+// Single-prayer field allowlist
+// ---------------------------------------------------------------------------
+
+// One allowlist, used by both the AJAX handler and the ESI renderer, so a
+// caller cannot name a property of the timetable row and read it back.
+$fiveprayer_esi_single = new ReflectionMethod(ESIDynamicContentHandler::class, 'generateSinglePrayerContent');
+$fiveprayer_esi_single->setAccessible(true);
+
+fiveprayer_assert(null === PrayerFieldMap::getProperty('some_private_property'), 'a property name that is not an advertised field is refused');
+fiveprayer_assert(null === PrayerFieldMap::getProperty(''), 'an empty field name is refused');
+fiveprayer_assert(null === PrayerFieldMap::getProperty(null), 'a missing field name is refused');
+fiveprayer_assert('fajr_begins' === PrayerFieldMap::getProperty('fajr_begins_time'), 'the advertised field spelling maps to its column');
+fiveprayer_assert('fajr_begins' === PrayerFieldMap::getProperty('fajr_begins'), 'the identity alias maps to the same column');
+fiveprayer_assert('asr_second_begins' === PrayerFieldMap::getProperty('asr_second_begins_time'), 'the second ‘Asr field maps to its column');
+fiveprayer_assert(in_array('midnight', PrayerFieldMap::getFields(), true), 'every advertised field is listed');
+
+$fiveprayer_unknown_field = $fiveprayer_esi_single->invoke($fiveprayer_esi, 'some_private_property');
+fiveprayer_assert('Time unavailable' === $fiveprayer_unknown_field, 'the ESI fragment returns no data for an unknown field');
 
 echo $fiveprayer_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_failures} check(s)\n")
