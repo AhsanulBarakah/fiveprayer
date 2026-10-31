@@ -16,12 +16,7 @@ trait SettingsDataManagementTrait
         global $wpdb;
         $meta_table_name = $wpdb->prefix . 'fp_prayer_settings_meta';
 
-        $settings_keys = [
-            'Only_affects_Asr_calculation',
-            'Methods_For_Calculation',
-            'midnight_calculation_mode',
-            'Higher_Latitudes_Methods'
-        ];
+        $settings_keys = $this->getExportableSettingKeys();
 
         $export_data = [];
         foreach ($settings_keys as $key) {
@@ -72,6 +67,15 @@ trait SettingsDataManagementTrait
         $uploaded_file = sanitize_text_field(wp_unslash($_FILES['settings_json']['tmp_name']));
         if (!is_uploaded_file($uploaded_file)) {
             $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid upload.', 'fiveprayer'), 'data_management');
+            return;
+        }
+
+        // A settings file is a few kilobytes. Anything near a megabyte is not
+        // one, and reading it into memory on an admin request is not worth it.
+        $max_import_bytes = 1024 * 1024;
+
+        if (filesize($uploaded_file) > $max_import_bytes) {
+            $this->redirect_with_notice('fiveprayer-settings', 'error', __('The file is too large to be a settings file (1 MB maximum).', 'fiveprayer'), 'data_management');
             return;
         }
 
@@ -247,16 +251,66 @@ trait SettingsDataManagementTrait
         }
     }
 
+    /**
+     * The settings keys a settings file carries.
+     *
+     * Export writes these and import accepts nothing else, so a crafted file
+     * cannot overwrite an unrelated setting or skip the sanitising a normal
+     * save applies.
+     *
+     * @return string[]
+     */
+    private function getExportableSettingKeys(): array
+    {
+        return [
+            'Only_affects_Asr_calculation',
+            'Methods_For_Calculation',
+            'midnight_calculation_mode',
+            'Higher_Latitudes_Methods',
+        ];
+    }
+
+    /**
+     * Clean an imported value the way a settings save would.
+     *
+     * @param mixed $value Value read from the uploaded file.
+     * @return mixed
+     */
+    private function sanitizeImportedValue($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->sanitizeImportedValue($item);
+            }
+
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return sanitize_text_field($value);
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value) || null === $value) {
+            return $value;
+        }
+
+        return null;
+    }
+
     private function import_settings_data(array $import_data): void
     {
         global $wpdb;
         $meta_table_name = $wpdb->prefix . 'fp_prayer_settings_meta';
         $current_version = \FivePrayer\Core\Database\VersionManager::getCurrentPluginVersion();
 
-        foreach ($import_data as $key => $value) {
+        foreach ($this->getExportableSettingKeys() as $key) {
+            $value = isset($import_data[$key]) ? $import_data[$key] : null;
+
             if (!is_array($value)) {
                 continue;
             }
+
+            $value = $this->sanitizeImportedValue($value);
 
             $rows_cache_key = 'fiveprayer_meta_rows_' . md5($meta_table_name . '|' . $key);
             $existing_rows  = wp_cache_get($rows_cache_key, 'fiveprayer');
@@ -275,7 +329,7 @@ trait SettingsDataManagementTrait
             if (empty($existing_rows)) {
                 $wpdb->insert($meta_table_name, [ // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                     'meta-key' => $key,
-                    'value' => sanitize_text_field(json_encode($value, JSON_UNESCAPED_UNICODE)),
+                    'value' => wp_json_encode($value, JSON_UNESCAPED_UNICODE),
                     'version' => $current_version
                 ]);
                 wp_cache_delete($rows_cache_key, 'fiveprayer');
@@ -294,7 +348,9 @@ trait SettingsDataManagementTrait
                 $wpdb->delete($meta_table_name, ['meta-key' => $key]); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                 $wpdb->insert($meta_table_name, [ // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                     'meta-key' => $key,
-                    'value' => sanitize_text_field(json_encode($final_data, JSON_UNESCAPED_UNICODE)),
+                    // Stored as JSON, not through sanitize_text_field(): that
+                    // strips quotes and percent sequences out of the payload.
+                    'value' => wp_json_encode($final_data, JSON_UNESCAPED_UNICODE),
                     'version' => $current_version
                 ]);
 

@@ -736,6 +736,73 @@ fiveprayer_assert(in_array('midnight', PrayerFieldMap::getFields(), true), 'ever
 $fiveprayer_unknown_field = $fiveprayer_esi_single->invoke($fiveprayer_esi, 'some_private_property');
 fiveprayer_assert('Time unavailable' === $fiveprayer_unknown_field, 'the ESI fragment returns no data for an unknown field');
 
+// ---------------------------------------------------------------------------
+// Settings import
+// ---------------------------------------------------------------------------
+
+// The importer is reached through an admin form and answers with a redirect, so
+// the test drives its key list and its write path directly. Only the trait is
+// pulled in: none of the admin screen around it is needed here.
+$fiveprayer_settings_importer = new class {
+    use \FivePrayer\Core\Admin\Traits\SettingsDataManagementTrait;
+};
+
+$fiveprayer_export_keys = new ReflectionMethod($fiveprayer_settings_importer, 'getExportableSettingKeys');
+$fiveprayer_export_keys->setAccessible(true);
+$fiveprayer_run_import = new ReflectionMethod($fiveprayer_settings_importer, 'import_settings_data');
+$fiveprayer_run_import->setAccessible(true);
+
+fiveprayer_assert(
+    !in_array('printer_button_url', $fiveprayer_export_keys->invoke($fiveprayer_settings_importer), true),
+    'a settings file cannot name a key the export never writes'
+);
+
+$fiveprayer_import_meta_table = $wpdb->prefix . 'fp_prayer_settings_meta';
+
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the test reads and restores real rows.
+$fiveprayer_read_meta = static function (string $key) use ($wpdb, $fiveprayer_import_meta_table) {
+    return $wpdb->get_var($wpdb->prepare("SELECT value FROM %i WHERE `meta-key` = %s", $fiveprayer_import_meta_table, $key));
+};
+
+$fiveprayer_url_before     = $fiveprayer_read_meta('printer_button_url');
+$fiveprayer_methods_before = $fiveprayer_read_meta('Methods_For_Calculation');
+
+$fiveprayer_run_import->invoke($fiveprayer_settings_importer, [
+    'printer_button_url'      => 'javascript:alert(1)',
+    'Methods_For_Calculation' => [
+        ['id' => 987654, 'name' => '<script>imported</script>', 'method' => 'mw l'],
+    ],
+]);
+
+$fiveprayer_methods_after = (string) $fiveprayer_read_meta('Methods_For_Calculation');
+
+fiveprayer_assert(
+    $fiveprayer_url_before === $fiveprayer_read_meta('printer_button_url'),
+    'a settings file cannot overwrite a key the export never writes'
+);
+fiveprayer_assert(
+    false !== strpos($fiveprayer_methods_after, '987654'),
+    'the settings import still writes a key the export carries'
+);
+fiveprayer_assert(
+    false === strpos($fiveprayer_methods_after, '<script>'),
+    'an imported calculation method is stored without its tags'
+);
+
+// Put the row back the way it was found.
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- the test restores a real row.
+if (null === $fiveprayer_methods_before) {
+    $wpdb->delete($fiveprayer_import_meta_table, ['meta-key' => 'Methods_For_Calculation'], ['%s']);
+} else {
+    $wpdb->update(
+        $fiveprayer_import_meta_table,
+        ['value' => $fiveprayer_methods_before],
+        ['meta-key' => 'Methods_For_Calculation'],
+        ['%s'],
+        ['%s']
+    );
+}
+
 echo $fiveprayer_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_failures} check(s)\n")
     : esc_html("\nPASS: all security regression checks\n");
