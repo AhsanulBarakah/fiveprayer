@@ -38,7 +38,16 @@ foreach ($fiveprayer_tables as $fiveprayer_table) {
     // phpcs:enable
 }
 
-// 2. Options and transients. One prefix covers every setting, migration flag,
+// 2. The default placeholder image this plugin uploaded to the Media Library.
+//    Its id is only kept in a transient, which step 3 deletes, so it has to be
+//    read before then.
+$fiveprayer_default_image_id = (int) get_transient('fiveprayer_default_image_id');
+
+if ($fiveprayer_default_image_id > 0 && 'attachment' === get_post_type($fiveprayer_default_image_id)) {
+    wp_delete_attachment($fiveprayer_default_image_id, true);
+}
+
+// 3. Options and transients. One prefix covers every setting, migration flag,
 //    dismissed notice and hourly rate-limit counter the plugin writes, so a
 //    setting added later is cleaned up without touching this file.
 $fiveprayer_option_patterns = [
@@ -57,7 +66,7 @@ foreach ($fiveprayer_option_patterns as $fiveprayer_pattern) {
     $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $fiveprayer_pattern));
 }
 
-// 3. Scheduled events.
+// 4. Scheduled events.
 $fiveprayer_crons = [
     'fiveprayer_hourly_cache_check',
     'fiveprayer_twice_daily_cache_check',
@@ -70,7 +79,7 @@ foreach ($fiveprayer_crons as $fiveprayer_cron) {
     wp_clear_scheduled_hook($fiveprayer_cron);
 }
 
-// 4. The generated combined stylesheet/script.
+// 5. The generated combined stylesheet/script.
 if (!function_exists('fiveprayer_uninstall_remove_directory')) {
     /**
      * Remove a directory and everything in it.
