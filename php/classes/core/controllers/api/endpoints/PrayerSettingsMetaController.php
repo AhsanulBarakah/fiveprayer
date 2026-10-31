@@ -87,53 +87,7 @@ class PrayerSettingsMetaController extends RestControllerBase
             }
 
             $meta_key = $data['meta'];
-            $value = $data['value'];
-
-            if (is_string($value)) {
-                $decoded = json_decode($value, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $value = $decoded;
-                }
-            }
-
-            SecurityHelper::validate_input($meta_key);
-
-            if ($meta_key === 'printer') {
-                $value = $this->validatePrinterSettings($value);
-            } elseif ($meta_key === 'skip_iqamah_midnight') {
-                $value = (bool) $value;
-            } elseif ($meta_key === 'hide_month_selection') {
-                $value = (bool) $value;
-            } elseif ($meta_key === 'hide_custom_url_button') {
-                $value = (bool) $value;
-            } elseif ($meta_key === 'printer_button_url') {
-                $value = (string) $value;
-            } elseif ($meta_key === 'auto_print_page_url') {
-                $value = (string) $value;
-            } elseif ($meta_key === 'custom-prayer-time-schedules') {
-                $value = $this->validateCustomPrayerTimeSchedules($value);
-            } elseif ($meta_key === 'hover_mode') {
-                $value = ($value === 'replace') ? 'replace' : 'blend';
-            } elseif ($meta_key === 'hover_enabled') {
-                $value = (bool) $value;
-            } elseif ($meta_key === 'borderradius') {
-                // Corner rounding of the timetable: a whole number of pixels,
-                // clamped to the range the settings screen offers. Stored as a
-                // string like the border width, which the readers expect.
-                $value = (string) StyleManager::getBorderRadius($value);
-            } elseif ($meta_key === 'vertical_today_layout') {
-                $value = $this->validateVerticalTodayLayout($value);
-            } elseif ($meta_key === 'day_display') {
-                $value = $this->validateDayDisplay($value);
-            } elseif ($meta_key === 'extra_prayers') {
-                $value = $this->validateExtraPrayers($value);
-            } elseif (is_string($value)) {
-                $value = SecurityHelper::sanitize_text($value);
-            } elseif (is_array($value)) {
-                if ($meta_key === 'location_list') {
-                    $value = $this->validateLocationList($value);
-                }
-            }
+            $value    = $this->sanitizeSettingValue($data['meta'], $data['value']);
 
             $result = $this->upsertSetting($meta_key, $value);
 
@@ -167,41 +121,7 @@ class PrayerSettingsMetaController extends RestControllerBase
 
             foreach ($settings as $meta_key => $value) {
                 try {
-                    if (is_string($value)) {
-                        $decoded = json_decode($value, true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                            $value = $decoded;
-                        }
-                    }
-
-                    SecurityHelper::validate_input($meta_key);
-
-                    if ($meta_key === 'printer') {
-                        $value = $this->validatePrinterSettings($value);
-                    } elseif ($meta_key === 'skip_iqamah_midnight' || $meta_key === 'hide_month_selection' || $meta_key === 'hide_custom_url_button') {
-                        $value = (bool) $value;
-                    } elseif ($meta_key === 'printer_button_url' || $meta_key === 'auto_print_page_url') {
-                        $value = (string) $value;
-                    } elseif ($meta_key === 'custom-prayer-time-schedules') {
-                        $value = $this->validateCustomPrayerTimeSchedules($value);
-                    } elseif ($meta_key === 'hover_mode') {
-                        $value = ($value === 'replace') ? 'replace' : 'blend';
-                    } elseif ($meta_key === 'hover_enabled') {
-                        $value = (bool) $value;
-                    } elseif ($meta_key === 'borderradius') {
-                        // Same clamp as the single save, so both routes agree.
-                        $value = (string) StyleManager::getBorderRadius($value);
-                    } elseif ($meta_key === 'vertical_today_layout') {
-                        $value = $this->validateVerticalTodayLayout($value);
-                    } elseif ($meta_key === 'day_display') {
-                        $value = $this->validateDayDisplay($value);
-                    } elseif ($meta_key === 'extra_prayers') {
-                        $value = $this->validateExtraPrayers($value);
-                    } elseif (is_string($value)) {
-                        $value = SecurityHelper::sanitize_text($value);
-                    } elseif (is_array($value) && $meta_key === 'location_list') {
-                        $value = $this->validateLocationList($value);
-                    }
+                    $value = $this->sanitizeSettingValue($meta_key, $value);
 
                     $result = $this->upsertSetting($meta_key, $value);
                     $saved[] = $meta_key;
@@ -225,6 +145,124 @@ class PrayerSettingsMetaController extends RestControllerBase
             SecurityHelper::log_security_event('Error in batch save: ' . $e->getMessage(), 'error');
             return new WP_Error('internal_error', 'Error in batch save: ' . $e->getMessage(), ['status' => 500]);
         }
+    }
+
+    /**
+     * Sanitise one setting before it is stored.
+     *
+     * Both save routes call this method, so they cannot drift apart — the batch
+     * route used to store array values exactly as sent while the single route
+     * validated them, and both stored the two link settings with a bare string
+     * cast.
+     *
+     * @param string $meta_key Setting name.
+     * @param mixed  $value    Value as sent by the client.
+     * @return mixed Value safe to store.
+     * @throws Exception When a validator rejects the value.
+     */
+    private function sanitizeSettingValue(string $meta_key, $value)
+    {
+        // Settings arrive either as a JSON object/array or as the JSON string
+        // of one, depending on the caller.
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $value = $decoded;
+            }
+        }
+
+        SecurityHelper::validate_input($meta_key);
+
+        if ('printer' === $meta_key) {
+            return $this->validatePrinterSettings($value);
+        }
+
+        if (in_array($meta_key, ['skip_iqamah_midnight', 'hide_month_selection', 'hide_custom_url_button', 'hover_enabled'], true)) {
+            return (bool) $value;
+        }
+
+        if (in_array($meta_key, ['printer_button_url', 'auto_print_page_url'], true)) {
+            // Both are printed as a link target (a button, or the page an
+            // automatic print redirects to). esc_url_raw() drops a scheme the
+            // site must never emit, such as `javascript:`; an empty string is
+            // still allowed so the setting can be cleared.
+            return esc_url_raw(is_string($value) ? $value : '');
+        }
+
+        if ('custom-prayer-time-schedules' === $meta_key) {
+            return $this->validateCustomPrayerTimeSchedules($value);
+        }
+
+        if ('hover_mode' === $meta_key) {
+            return ('replace' === $value) ? 'replace' : 'blend';
+        }
+
+        if ('borderradius' === $meta_key) {
+            // Corner rounding of the timetable: a whole number of pixels,
+            // clamped to the range the settings screen offers. Stored as a
+            // string like the border width, which the readers expect.
+            return (string) StyleManager::getBorderRadius($value);
+        }
+
+        if ('vertical_today_layout' === $meta_key) {
+            return $this->validateVerticalTodayLayout($value);
+        }
+
+        if ('day_display' === $meta_key) {
+            return $this->validateDayDisplay($value);
+        }
+
+        if ('extra_prayers' === $meta_key) {
+            return $this->validateExtraPrayers($value);
+        }
+
+        if ('location_list' === $meta_key && is_array($value)) {
+            return $this->validateLocationList($value);
+        }
+
+        if (is_string($value)) {
+            return SecurityHelper::sanitize_text($value);
+        }
+
+        if (is_array($value)) {
+            return $this->sanitizeSettingArray($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Sanitise an array setting that has no validator of its own.
+     *
+     * Shapes are preserved: keys are kept exactly as sent and every nested
+     * value is cleaned the same way. Numbers and booleans are kept, because a
+     * caller that stores `lat` or `enabled` must get a number or a boolean back.
+     *
+     * @param array $value Array as sent by the client.
+     * @return array
+     */
+    private function sanitizeSettingArray(array $value): array
+    {
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $value[$key] = $this->sanitizeSettingArray($item);
+                continue;
+            }
+
+            if (is_string($item)) {
+                $value[$key] = sanitize_text_field($item);
+                continue;
+            }
+
+            if (is_int($item) || is_float($item) || is_bool($item) || null === $item) {
+                continue;
+            }
+
+            // Objects and resources are not a settable value.
+            unset($value[$key]);
+        }
+
+        return $value;
     }
 
     public function get_meta()

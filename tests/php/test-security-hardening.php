@@ -34,6 +34,7 @@ defined('ABSPATH') || exit;
 
 use FivePrayer\Core\API\ApiKeyManager;
 use FivePrayer\Core\Assets\ESIDynamicContentHandler;
+use FivePrayer\Core\Controllers\API\EndPoints\PrayerSettingsMetaController;
 use FivePrayer\Core\Controllers\API\EndPoints\TranslateController;
 use FivePrayer\Core\Helpers\PrayerFieldMap;
 use FivePrayer\Core\LocalNetworkRouter;
@@ -528,6 +529,49 @@ fiveprayer_assert(
 );
 
 fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
+
+// ---------------------------------------------------------------------------
+// Settings sanitisation
+// ---------------------------------------------------------------------------
+
+// Both link settings are printed as a link target, so a scheme that runs script
+// must never be stored — and both save routes must sanitise identically.
+$fiveprayer_settings_controller = new PrayerSettingsMetaController();
+$fiveprayer_settings_sanitize   = new ReflectionMethod(PrayerSettingsMetaController::class, 'sanitizeSettingValue');
+$fiveprayer_settings_sanitize->setAccessible(true);
+
+fiveprayer_assert(
+    '' === $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'printer_button_url', 'javascript:alert(1)'),
+    'a javascript: printer button URL is stored as an empty string'
+);
+fiveprayer_assert(
+    '' === $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'auto_print_page_url', 'javascript:alert(1)'),
+    'a javascript: auto-print URL is stored as an empty string'
+);
+fiveprayer_assert(
+    '' === $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'printer_button_url', ''),
+    'the printer button URL can still be cleared'
+);
+fiveprayer_assert(
+    'https://example.com/print' === $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'printer_button_url', 'https://example.com/print'),
+    'a normal printer button URL is kept as sent'
+);
+fiveprayer_assert(
+    '' === $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'printer_button_url', ['https://example.com']),
+    'a non-string printer button URL is not stored'
+);
+
+$fiveprayer_clean_setting = $fiveprayer_settings_sanitize->invoke($fiveprayer_settings_controller, 'some_array_setting', [
+    'label'   => '<script>alert(1)</script>Fajr',
+    'count'   => 5,
+    'enabled' => true,
+    'nested'  => ['label' => '<b>Isha</b>'],
+]);
+
+fiveprayer_assert(false === strpos((string) $fiveprayer_clean_setting['label'], '<'), 'an array setting is sanitised recursively');
+fiveprayer_assert(5 === $fiveprayer_clean_setting['count'] && true === $fiveprayer_clean_setting['enabled'], 'numbers and booleans in an array setting are kept');
+fiveprayer_assert('Isha' === $fiveprayer_clean_setting['nested']['label'], 'nested array values are sanitised too');
+fiveprayer_assert(['label', 'count', 'enabled', 'nested'] === array_keys($fiveprayer_clean_setting), 'array keys are kept');
 
 // ---------------------------------------------------------------------------
 // Share on Local Network
