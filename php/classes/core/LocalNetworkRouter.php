@@ -525,11 +525,46 @@ class LocalNetworkRouter
 
         $hostname = trim($hostname, '[]');
 
-        if (in_array($host, self::get_saved_hosts(), true) || in_array($hostname, self::get_server_addresses(), true)) {
+        $allowed = in_array($host, self::get_saved_hosts(), true)
+            || in_array($hostname, self::get_server_addresses(), true);
+
+        if (!$allowed) {
+            return false;
+        }
+
+        // Behind a reverse proxy REMOTE_ADDR is the proxy's private address for
+        // every request, including internet visitors. Loopback host names are
+        // therefore only accepted when the connection itself came from the
+        // loopback interface; otherwise `Host: 127.0.0.1` would switch the
+        // router on for anyone.
+        if (self::is_loopback_host($hostname)) {
+            return self::is_loopback_host(fiveprayer_get_server_value('REMOTE_ADDR'));
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether a value is a loopback host name or address.
+     *
+     * Covers `localhost`, `::1` and the whole 127.0.0.0/8 block.
+     *
+     * @param string $value Host name or IP address.
+     * @return bool
+     */
+    private static function is_loopback_host(string $value): bool
+    {
+        $value = strtolower(trim($value));
+
+        if ('localhost' === $value || '::1' === $value) {
             return true;
         }
 
-        return false;
+        if (false === filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return false;
+        }
+
+        return 0 === strpos($value, '127.');
     }
 
     /**

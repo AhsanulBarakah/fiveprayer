@@ -1021,6 +1021,17 @@ fiveprayer_assert(
     'the admin state flags a switch that the production guard blocks'
 );
 
+// Behind a reverse proxy REMOTE_ADDR is the proxy's private address for every
+// request, so a loopback Host must only pass when the connection itself is
+// loopback.
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+fiveprayer_assert(true === LocalNetworkRouter::is_allowed_host('127.0.0.1'), 'a loopback Host from a loopback client is accepted');
+
+$_SERVER['REMOTE_ADDR'] = '192.168.1.5';
+fiveprayer_assert(false === LocalNetworkRouter::is_allowed_host('127.0.0.1'), 'a loopback Host from a LAN client is refused');
+fiveprayer_assert(false === LocalNetworkRouter::is_allowed_host('127.0.0.1:10010'), 'a loopback Host with a port from a LAN client is refused');
+fiveprayer_assert(true === LocalNetworkRouter::is_allowed_host('192.168.1.104:10010'), 'a saved LAN host from a LAN client is still accepted');
+
 $fiveprayer_server_ips = static function () {
     return ['10.0.0.2'];
 };
