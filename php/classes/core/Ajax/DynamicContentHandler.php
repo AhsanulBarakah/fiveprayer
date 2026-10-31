@@ -71,7 +71,6 @@ class DynamicContentHandler {
         // refused here, before a renderer is reached.
         if (!in_array($content_type, ['current_time', 'next_prayer', 'single_prayer', 'hijri_date'], true)) {
             wp_send_json_error('Invalid content type');
-            return;
         }
 
         // Get fresh data based on content type

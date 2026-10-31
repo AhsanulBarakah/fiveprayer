@@ -188,7 +188,7 @@ add_action('init', 'fiveprayer_maybe_add_asr_second_begins_column', 20);
  * heartbeat event. The SDK no longer ships, but a site that ran it keeps those
  * rows and the job forever, so they are removed once and a flag records it.
  */
-function fiveprayer_remove_legacy_telemetry_state() {
+function fiveprayer_remove_legacy_telemetry_state(): void {
     // Autoloaded flag: once handled, this is a no-op and costs no query.
     if (get_option('fiveprayer_telemetry_removed')) {
         return;

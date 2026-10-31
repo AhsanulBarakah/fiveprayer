@@ -30,7 +30,6 @@ trait ESIContentGeneratorTrait
         // page it came from is genuine.
         if (!hash_equals($this->generateESISignature($type, $atts_encoded, $esi_id), $signature)) {
             wp_die('ESI Security check failed', 'Security Error', ['response' => 403]);
-            return true;
         }
 
         if (!in_array($type, $this->getESIAllowedTypes(), true)) {
@@ -73,9 +72,9 @@ trait ESIContentGeneratorTrait
      * the same attribute filter: an argument the shortcode would ignore must not
      * reach the renderer through the fragment instead.
      *
-     * @param string $type Content type requested.
-     * @param array  $atts Decoded attributes from the request.
-     * @return array
+     * @param string               $type Content type requested.
+     * @param array<string, mixed> $atts Decoded attributes from the request.
+     * @return array<string, mixed>
      */
     private function sanitizeESIAtts($type, array $atts)
     {

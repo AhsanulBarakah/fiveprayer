@@ -236,8 +236,8 @@ class PrayerSettingsMetaController extends RestControllerBase
      * value is cleaned the same way. Numbers and booleans are kept, because a
      * caller that stores `lat` or `enabled` must get a number or a boolean back.
      *
-     * @param array $value Array as sent by the client.
-     * @return array
+     * @param array<string, mixed> $value Array as sent by the client.
+     * @return array<string, mixed>
      */
     private function sanitizeSettingArray(array $value): array
     {

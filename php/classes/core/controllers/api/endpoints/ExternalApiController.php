@@ -47,8 +47,8 @@ class ExternalApiController extends RestControllerBase
      * instead let a shared cache serve one site's response to another, and
      * without `Vary: Origin` a cache was free to mix them up anyway.
      *
-     * @param bool            $served  Whether the request has been served.
-     * @param WP_REST_Response $result  Response, when there is one.
+     * @param bool             $served  Whether the request has been served.
+     * @param \WP_REST_Response $result  Response, when there is one.
      * @param WP_REST_Request  $request Current request.
      * @param WP_REST_Server   $server  REST server.
      * @return bool

@@ -931,19 +931,7 @@ parameters:
 			path: php/classes/core/Assets/ESIDynamicContentHandler.php
 
 		-
-			message: '#^Method FivePrayer\\Core\\Assets\\ESIDynamicContentHandler\:\:hasESISupport\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/Assets/ESIDynamicContentHandler.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Assets\\ESIDynamicContentHandler\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/Assets/ESIDynamicContentHandler.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Assets\\ESIDynamicContentHandler\:\:isESIEnabled\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: php/classes/core/Assets/ESIDynamicContentHandler.php
@@ -3447,12 +3435,6 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
 			identifier: argument.type
-			count: 1
-			path: php/classes/core/Shortcodes.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
 			count: 1
 			path: php/classes/core/Shortcodes.php
 
