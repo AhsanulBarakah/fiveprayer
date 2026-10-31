@@ -180,7 +180,7 @@ class ApiKeyManager
         wp_cache_delete(self::STORED_CACHE_KEY, self::CACHE_GROUP);
         wp_cache_delete(self::AUTH_CACHE_KEY, self::CACHE_GROUP);
 
-        Logger::info('Successfully generated new API key: ' . substr($api_key, 0, 8) . '...', 'ApiKeyManager');
+        Logger::info('Successfully generated new API key: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
 
         return [
             'success' => true,
@@ -612,7 +612,7 @@ class ApiKeyManager
         foreach ($stored_keys as $stored) {
             $decrypted = $this->decrypt_key($stored);
             if (hash_equals($decrypted, $api_key)) {
-                Logger::debug('API key collision detected: ' . substr($api_key, 0, 8) . '...', 'ApiKeyManager');
+                Logger::debug('API key collision detected: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
                 return true;
             }
         }

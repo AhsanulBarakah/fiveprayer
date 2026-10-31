@@ -63,7 +63,7 @@ trait KeyValidationTrait
             return ['valid' => false, 'error' => 'Invalid API key'];
         }
 
-        Logger::debug('Validating API key: ' . substr($api_key, 0, 8) . '...', 'ApiKeyManager');
+        Logger::debug('Validating API key: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
 
         // ---------------------------------------------------------------
         // 3. Look up the key
@@ -96,7 +96,7 @@ trait KeyValidationTrait
         }
 
         if (!$key_data) {
-            Logger::warning('Invalid API key provided: ' . substr($api_key, 0, 8) . '...', 'ApiKeyManager');
+            Logger::warning('Invalid API key provided: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
             BruteForceSettings::track_failed_attempt($request_ip);
             return ['valid' => false, 'error' => 'Invalid API key'];
         }
@@ -181,6 +181,22 @@ trait KeyValidationTrait
             'valid' => true,
             'key_data' => $key_data,
         ];
+    }
+
+    /**
+     * Short fingerprint of a presented key, for log lines.
+     *
+     * The first eight characters are not a fingerprint: every key this plugin
+     * issues starts with the same characters, so they identify no key at all —
+     * and they put part of the secret itself into a log file. A truncated hash
+     * identifies the same key across log lines without revealing any of it.
+     *
+     * @param string $api_key Raw key presented by the caller.
+     * @return string
+     */
+    private function key_fingerprint(string $api_key): string
+    {
+        return substr(hash('sha256', $api_key), 0, 8);
     }
 
     /**
