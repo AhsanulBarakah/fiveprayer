@@ -5,6 +5,7 @@ namespace FivePrayer\Core\Controllers\API\EndPoints\Traits;
 defined('ABSPATH') || exit;
 
 use FivePrayer\Core\Helpers\PrayerDataCache;
+use FivePrayer\Core\Logging\Logger;
 
 /**
  * Trait HijriDateTrait
@@ -232,10 +233,12 @@ trait HijriDateTrait
             // text. We return null so consumers can distinguish "Hijri
             // calculation failed" from "Hijri computed but no languages were
             // requested".
+            Logger::error('Hijri calculation failed: ' . $e->getMessage(), 'HijriDate');
+
             return [
                 'hijri_date' => null,
                 'is_ramadan' => null,
-                'error' => 'Hijri calculation failed: ' . $e->getMessage(),
+                'error' => 'Hijri calculation failed',
             ];
         }
     }

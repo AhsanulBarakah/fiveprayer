@@ -42,6 +42,34 @@ class ApiAdmin
         add_action('wp_ajax_fp_api_expire_email_cooldown', [$this, 'handle_expire_email_cooldown']);
         add_action('wp_ajax_fp_api_unblock_ip', [$this, 'handle_unblock_ip']);
         add_action('admin_notices', [$this, 'maybe_show_legacy_keys_notice']);
+        add_action('admin_notices', [$this, 'maybe_show_missing_salt_notice']);
+    }
+
+    /**
+     * Explain why API keys cannot be created when the site has no salts.
+     *
+     * The plugin used to fall back to hard-coded salts, which made every
+     * install share the same key material. It now refuses instead.
+     */
+    public function maybe_show_missing_salt_notice(): void
+    {
+        $screen = get_current_screen();
+        if (!$screen || strpos($screen->id, $this->page_slug) === false) {
+            return;
+        }
+
+        if ($this->api_key_manager->has_encryption_salts()) {
+            return;
+        }
+
+        ?>
+        <div class="notice notice-error">
+            <p>
+                <strong><?php esc_html_e('FivePrayer API keys are disabled:', 'fiveprayer'); ?></strong>
+                <?php esc_html_e('AUTH_KEY and SECURE_AUTH_KEY are missing from wp-config.php. Add them (WordPress’s salt generator can create them) before creating or migrating API keys.', 'fiveprayer'); ?>
+            </p>
+        </div>
+        <?php
     }
 
 
@@ -75,7 +103,7 @@ class ApiAdmin
                     ),
                     $legacy_count
                 )); ?>
-                <?php esc_html_e('The plugin now uses AES-256-CBC encryption, and these keys need to be regenerated to remain usable.', 'fiveprayer'); ?>
+                <?php esc_html_e('The plugin now stores only a keyed hash, so these keys need to be regenerated to remain usable.', 'fiveprayer'); ?>
             </p>
             <p>
                 <button type="button" class="button button-primary" id="fiveprayer-migrate-legacy-keys">

@@ -115,23 +115,66 @@ class SettingsAdmin
             printf('<div class="notice notice-success is-dismissible fiveprayer-notice"><p>%s</p></div>', esc_html($export_notice));
         }
 
-        $page   = sanitize_key(SecurityHelper::get_sanitized_get_input('page'));
-        $fp_msg = SecurityHelper::get_sanitized_get_input('fp_msg');
+        $page    = sanitize_key(SecurityHelper::get_sanitized_get_input('page'));
+        $message = self::get_notice_message(sanitize_key((string) SecurityHelper::get_sanitized_get_input('fp_msg')));
 
-        if (in_array($page, ['fiveprayer', 'fiveprayer-settings', 'fiveprayer-api-settings']) && !empty($fp_msg)) {
+        if (in_array($page, ['fiveprayer', 'fiveprayer-settings', 'fiveprayer-api-settings'], true) && '' !== $message) {
             $updated = SecurityHelper::has_query_arg('updated');
             $error   = SecurityHelper::has_query_arg('error');
-            $class = $updated ? 'success' : ($error ? 'error' : 'success');
-            printf('<div class="notice notice-%1$s is-dismissible fiveprayer-notice"><p>%2$s</p></div>', esc_attr($class), esc_html($fp_msg));
+            $class   = $updated ? 'success' : ($error ? 'error' : 'success');
+            printf('<div class="notice notice-%1$s is-dismissible fiveprayer-notice"><p>%2$s</p></div>', esc_attr($class), esc_html($message));
         }
     }
 
-    private function redirect_with_notice(string $page, string $type, string $message, string $tab = ''): void
+    /**
+     * Notice text by code.
+     *
+     * Only these strings can ever be rendered. The URL carries a short code,
+     * never message text, so a crafted `fp_msg` can no longer put arbitrary
+     * words on an administrator's screen.
+     *
+     * @return array<string, string>
+     */
+    public static function get_notice_messages(): array
+    {
+        return [
+            'logging_saved'                 => __('Logging settings saved successfully.', 'fiveprayer'),
+            'log_cleared'                   => __('Custom FivePrayer log file has been cleared.', 'fiveprayer'),
+            'log_missing'                   => __('Log file does not exist.', 'fiveprayer'),
+            'cache_cleared'                 => __('All caches cleared successfully. Time-sensitive content should now update properly.', 'fiveprayer'),
+            'upload_failed'                 => __('No file uploaded or upload failed.', 'fiveprayer'),
+            'upload_invalid'                => __('Invalid upload.', 'fiveprayer'),
+            'upload_invalid_json'           => __('Invalid JSON file.', 'fiveprayer'),
+            'settings_upload_too_large'     => __('The file is too large to be a settings file (1 MB maximum).', 'fiveprayer'),
+            'translations_upload_too_large' => __('The file is too large to be a translation file (1 MB maximum).', 'fiveprayer'),
+            'settings_imported'             => __('Calculation settings imported successfully. Duplicates have been cleaned and merged with existing settings.', 'fiveprayer'),
+            'settings_reset'                => __('Calculation settings have been reset to defaults. All settings restored to default values.', 'fiveprayer'),
+            'settings_soft_reset'           => __('Default settings restored. Custom entries have been kept.', 'fiveprayer'),
+            'reset_failed'                  => __('An error occurred while resetting settings. Check the FivePrayer log for details.', 'fiveprayer'),
+            'defaults_load_failed'          => __('Could not load default settings.', 'fiveprayer'),
+            'translations_imported'         => __('Translations imported successfully.', 'fiveprayer'),
+            'translations_restored'         => __('Default translations restored. Custom languages kept.', 'fiveprayer'),
+            'translations_hard_reset'       => __('Hard reset completed. Defaults restored and custom translations removed.', 'fiveprayer'),
+            'translations_defaults_missing' => __('Could not load default translations.', 'fiveprayer'),
+        ];
+    }
+
+    /**
+     * Resolve a notice code to text, or an empty string for an unknown code.
+     */
+    public static function get_notice_message(string $code): string
+    {
+        $messages = self::get_notice_messages();
+
+        return isset($messages[$code]) ? $messages[$code] : '';
+    }
+
+    private function redirect_with_notice(string $page, string $type, string $message_code, string $tab = ''): void
     {
         $args = [
             'page'   => $page,
             $type    => '1',
-            'fp_msg' => $message,
+            'fp_msg' => sanitize_key($message_code),
         ];
         if ($tab) {
             $args['tab'] = $tab;

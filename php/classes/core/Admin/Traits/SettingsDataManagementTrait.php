@@ -60,13 +60,13 @@ trait SettingsDataManagementTrait
         check_admin_referer('fiveprayer_import_settings');
 
         if (!isset($_FILES['settings_json']['error'], $_FILES['settings_json']['tmp_name']) || $_FILES['settings_json']['error'] !== UPLOAD_ERR_OK) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('No file uploaded or upload failed.', 'fiveprayer'), 'data_management');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_failed', 'data_management');
             return;
         }
 
         $uploaded_file = sanitize_text_field(wp_unslash($_FILES['settings_json']['tmp_name']));
         if (!is_uploaded_file($uploaded_file)) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid upload.', 'fiveprayer'), 'data_management');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_invalid', 'data_management');
             return;
         }
 
@@ -75,7 +75,7 @@ trait SettingsDataManagementTrait
         $max_import_bytes = 1024 * 1024;
 
         if (filesize($uploaded_file) > $max_import_bytes) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('The file is too large to be a settings file (1 MB maximum).', 'fiveprayer'), 'data_management');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'settings_upload_too_large', 'data_management');
             return;
         }
 
@@ -83,12 +83,12 @@ trait SettingsDataManagementTrait
         $import_data = json_decode($file_content, true);
 
         if (!is_array($import_data)) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid JSON file.', 'fiveprayer'), 'data_management');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_invalid_json', 'data_management');
             return;
         }
 
         $this->import_settings_data($import_data);
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Calculation settings imported successfully. Duplicates have been cleaned and merged with existing settings.', 'fiveprayer'), 'data_management');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'settings_imported', 'data_management');
     }
 
     public function handle_reset_settings_defaults(): void
@@ -138,7 +138,7 @@ trait SettingsDataManagementTrait
             \FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
         }
 
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Calculation settings have been reset to defaults. All settings restored to default values.', 'fiveprayer'), 'data_management');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'settings_reset', 'data_management');
     }
 
     public function handle_reset_settings_defaults_soft(): void
@@ -154,7 +154,7 @@ trait SettingsDataManagementTrait
 
             $default_settings = \FivePrayer\Core\Database\FivePrayer_DatabaseMetaSettings::getMetaSettings();
             if (empty($default_settings)) {
-                $this->redirect_with_notice('fiveprayer-settings', 'error', __('Could not load default settings.', 'fiveprayer'), 'data_management');
+                $this->redirect_with_notice('fiveprayer-settings', 'error', 'defaults_load_failed', 'data_management');
                 return;
             }
 
@@ -222,7 +222,7 @@ trait SettingsDataManagementTrait
                 $wpdb->delete($meta_table_name, ['meta-key' => $key]); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                 $wpdb->insert($meta_table_name, [ // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                     'meta-key' => $key,
-                    'value' => sanitize_text_field(json_encode($merged)),
+                    'value' => $this->encode_settings_value($merged),
                     'version' => $current_version
                 ]);
 
@@ -236,19 +236,32 @@ trait SettingsDataManagementTrait
             $schema_helper = new \FivePrayer\Core\Database\SchemaHelper();
             $schema_helper->insertDefaultSettings();
 
-            $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Default settings restored. Custom entries have been kept.', 'fiveprayer'), 'data_management');
+            $this->redirect_with_notice('fiveprayer-settings', 'updated', 'settings_soft_reset', 'data_management');
         } catch (\Throwable $e) {
-            $this->redirect_with_notice(
-                'fiveprayer-settings',
-                'error',
-                sprintf(
-                    /* translators: %s: error message from the exception. */
-                    __('An error occurred while resetting settings: %s', 'fiveprayer'),
-                    $e->getMessage()
-                ),
-                'data_management'
-            );
+            \FivePrayer\Core\Logging\Logger::error('Soft settings reset failed: ' . $e->getMessage(), 'SettingsAdmin');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'reset_failed', 'data_management');
         }
+    }
+
+    /**
+     * Encode a settings value for storage.
+     *
+     * The array is sanitised first and the JSON is produced afterwards, which
+     * is the order import_settings_data uses. Calling sanitize_text_field() on
+     * the encoded string (the old behaviour) stripped quotes and turned `%20`
+     * into `20`, corrupting the stored JSON.
+     *
+     * @param mixed $value Settings value.
+     * @return string JSON safe to store.
+     */
+    private function encode_settings_value($value): string
+    {
+        // Defaults and rows read back from the table were sanitised when they
+        // were written; encoding them again must not run text sanitising over
+        // the JSON itself.
+        $json = wp_json_encode($value, JSON_UNESCAPED_UNICODE);
+
+        return is_string($json) ? $json : '[]';
     }
 
     /**

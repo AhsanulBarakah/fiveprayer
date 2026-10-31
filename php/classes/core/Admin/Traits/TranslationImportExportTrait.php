@@ -16,13 +16,13 @@ trait TranslationImportExportTrait
         check_admin_referer('fiveprayer_import_translations');
 
         if (!isset($_FILES['translations_json']['error'], $_FILES['translations_json']['tmp_name']) || $_FILES['translations_json']['error'] !== UPLOAD_ERR_OK) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('No file uploaded or upload failed.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_failed', 'translations');
             return;
         }
 
         $uploaded_file = sanitize_text_field(wp_unslash($_FILES['translations_json']['tmp_name']));
         if (!is_uploaded_file($uploaded_file)) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid upload.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_invalid', 'translations');
             return;
         }
 
@@ -31,14 +31,14 @@ trait TranslationImportExportTrait
         $max_import_bytes = 1024 * 1024;
 
         if (filesize($uploaded_file) > $max_import_bytes) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('The file is too large to be a translation file (1 MB maximum).', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'translations_upload_too_large', 'translations');
             return;
         }
 
         $contents = file_get_contents($uploaded_file);
         $decoded  = json_decode($contents, true);
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid JSON file.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'upload_invalid_json', 'translations');
             return;
         }
 
@@ -94,7 +94,7 @@ trait TranslationImportExportTrait
         }
 
         $this->bust_caches();
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Translations imported successfully.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'translations_imported', 'translations');
     }
 
     public function handle_soft_reset(): void
@@ -106,13 +106,13 @@ trait TranslationImportExportTrait
 
         $defaults = $this->load_defaults();
         if ($defaults === null) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Could not load default translations.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'translations_defaults_missing', 'translations');
             return;
         }
 
         global $wpdb;
         $table = $wpdb->prefix . 'fp_prayer_settings_meta';
-        foreach ($defaults as $meta_key => &$value) {
+        foreach ($defaults as $meta_key => $value) {
             $encoded = wp_json_encode($value, JSON_UNESCAPED_UNICODE);
             $row_cache_key = 'fiveprayer_meta_row_id_' . md5($table . '|' . $meta_key);
             $existing_id   = wp_cache_get($row_cache_key, 'fiveprayer');
@@ -132,7 +132,7 @@ trait TranslationImportExportTrait
             wp_cache_delete('fiveprayer_all_settings_meta', 'fiveprayer');
         }
         $this->bust_caches();
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Default translations restored. Custom languages kept.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'translations_restored', 'translations');
     }
 
     public function handle_hard_reset(): void
@@ -144,14 +144,14 @@ trait TranslationImportExportTrait
 
         $defaults = $this->load_defaults();
         if ($defaults === null) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Could not load default translations.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'translations_defaults_missing', 'translations');
             return;
         }
 
         global $wpdb;
         $table = $wpdb->prefix . 'fp_prayer_settings_meta';
 
-        foreach ($defaults as $meta_key => &$value) {
+        foreach ($defaults as $meta_key => $value) {
             $encoded = wp_json_encode($value, JSON_UNESCAPED_UNICODE);
             $row_cache_key = 'fiveprayer_meta_row_id_' . md5($table . '|' . $meta_key);
             $existing_id   = wp_cache_get($row_cache_key, 'fiveprayer');
@@ -190,7 +190,7 @@ trait TranslationImportExportTrait
             }
         }
         $this->bust_caches();
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Hard reset completed. Defaults restored and custom translations removed.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'translations_hard_reset', 'translations');
     }
 
     public function handle_export(): void

@@ -17,6 +17,10 @@ declare global {
         active: boolean;
         host: string;
         requestIsLocal: boolean;
+        /** Comma-separated hosts the administrator saved for this server. */
+        savedHosts: string;
+        /** This server's own addresses, which are always accepted. */
+        serverAddresses: string;
         nonce: string;
         ajaxAction: string;
         optionName: string;

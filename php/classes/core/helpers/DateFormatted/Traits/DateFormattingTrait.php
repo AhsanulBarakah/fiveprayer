@@ -29,7 +29,7 @@ trait DateFormattingTrait
                             $converted_time = $this->split_numbers_and_convert($time_part, $numbers);
 
                             $translated_ampm = $ampm_part;
-                            foreach ($numbers as &$n) {
+                            foreach ($numbers as $n) {
                                 if (strtoupper($n['original_text']) === strtoupper($ampm_part)) {
                                     $translated_ampm = $n['translated_text'];
                                     break;
@@ -45,6 +45,7 @@ trait DateFormattingTrait
                     }
                 }
             }
+            unset($value);
         };
 
         $filter_translations = function ($translations) use ($active_language) {
@@ -81,7 +82,7 @@ trait DateFormattingTrait
                     $updated_day = $this->split_numbers_and_convert($day_num_str, $numbers);
 
                     $updated_month = $month_name_str;
-                    foreach ($months as &$m) {
+                    foreach ($months as $m) {
                         if (isset($m['original_text']) && $m['original_text'] === $month_name_str) {
                             $updated_month = $m['translated_text'];
                             break;
@@ -124,7 +125,7 @@ trait DateFormattingTrait
                 return $item['language_code'] === $active_language_code;
             });
             $results = [];
-            foreach ($tran as $key => &$value) {
+            foreach ($tran as $value) {
                 $results[] = $value;
             }
             return $results;
@@ -141,7 +142,7 @@ trait DateFormattingTrait
             $ah = 'AH';
 
             $ahFound = false;
-            foreach ($parts as $key => &$part) {
+            foreach ($parts as $key => $part) {
                 if (strtoupper($part) === 'AH' || $part === 'هـ') {
                     $ah = $part;
                     unset($parts[$key]);
@@ -168,7 +169,7 @@ trait DateFormattingTrait
             $updated_month = $month_name;
             if (!empty($month_name)) {
                 $foundMonth = false;
-                foreach ($months as &$m) {
+                foreach ($months as $m) {
                     if (strcasecmp(trim($m['original_text']), trim($month_name)) === 0) {
                         $updated_month = $m['translated_text'];
                         $foundMonth = true;
@@ -177,7 +178,7 @@ trait DateFormattingTrait
                 }
 
                 if (!$foundMonth) {
-                    foreach ($months as &$m) {
+                    foreach ($months as $m) {
                         if (strpos(strtolower($month_name), strtolower($m['original_text'])) !== false ||
                             strpos(strtolower($m['original_text']), strtolower($month_name)) !== false) {
                             $updated_month = $m['translated_text'];
@@ -189,7 +190,7 @@ trait DateFormattingTrait
             }
 
             $updated_ah = $ah;
-            foreach ($months as &$m) {
+            foreach ($months as $m) {
                 if (strcasecmp(trim($m['original_text']), trim($ah)) === 0) {
                     $updated_ah = $m['translated_text'];
                     break;

@@ -9,33 +9,32 @@ use FivePrayer\Core\Logging\Logger;
 /**
  * Trait LegacyMigrationTrait
  *
- * Handles migration of legacy SHA-256 hashed API keys to AES-256-CBC encryption.
- * Extracted from ApiKeyManager for code organization.
+ * Handles keys written before the keyed-hash storage change: AES-256-CBC
+ * ciphertext (decryptable once) and the older SHA-256 hex hashes (not
+ * recoverable at all). A row is "legacy" while it has no key_hash.
  */
 trait LegacyMigrationTrait
 {
     /**
-     * Check if a stored key is in the old SHA-256 hash format.
+     * Whether a stored value predates the key_hash column.
+     *
+     * @param string $stored Value of the legacy api_key column.
+     * @return bool
      */
     public function is_legacy_key(string $stored): bool
     {
-        // Try to decrypt – if it fails (empty), check if it looks like a SHA-256 hash
-        $decrypted = $this->decrypt_key($stored);
-        if ($decrypted !== '') {
-            return false; // Successfully decrypted, it's a new-style key
-        }
-
-        // AES-256-CBC ciphertext is base64-encoded and will have length > 64
-        // SHA-256 hashes are exactly 64 hex characters
-        if (strlen($stored) === 64 && preg_match('/^[0-9a-f]{64}$/i', $stored)) {
+        if ('' === $stored) {
             return true;
         }
 
-        return false;
+        // Ciphertext from the AES era can be decrypted once; a bare 64-char hex
+        // string is the even older SHA-256 hash.
+        return '' !== $this->decrypt_key($stored)
+            || (strlen($stored) === 64 && (bool) preg_match('/^[0-9a-f]{64}$/i', $stored));
     }
 
     /**
-     * Count how many legacy (SHA-256 hashed) keys exist in the database.
+     * Count how many key rows still need a hash.
      */
     public function has_legacy_keys(): int
     {
@@ -45,90 +44,86 @@ trait LegacyMigrationTrait
             return 0;
         }
 
-        // Same cached list the collision check and key validation use: the stored
-        // keys only change through ApiKeyManager, which drops this entry.
-        $stored_keys = wp_cache_get(self::STORED_CACHE_KEY, self::CACHE_GROUP);
-
-        if (!is_array($stored_keys)) {
-            $stored_keys = $wpdb->get_col($wpdb->prepare("SELECT api_key FROM %i", $this->table_name)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-            wp_cache_set(self::STORED_CACHE_KEY, $stored_keys, self::CACHE_GROUP, self::DATA_CACHE_TTL);
+        $columns = $this->table_columns();
+        if (!in_array('key_hash', $columns, true)) {
+            return 0;
         }
 
-        $count = 0;
-
-        foreach ($stored_keys as $stored) {
-            if ($this->is_legacy_key($stored)) {
-                $count++;
-            }
-        }
-
-        return $count;
+        // Deliberately uncached: this feeds an admin notice and must reflect a
+        // migration that just completed.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Admin notice count; must be live.
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i WHERE key_hash IS NULL",
+            $this->table_name
+        ));
     }
 
     /**
-     * Migrate all legacy (SHA-256 hashed) keys by regenerating them with AES encryption.
-     * Returns an array of migration results with id, name, and new key info.
+     * Migrate key rows that still have no hash.
+     *
+     * Rows whose ciphertext can be decrypted get their hash and lose the
+     * ciphertext. Rows that cannot be decrypted (SHA-256 hashes, rotated salts)
+     * are regenerated: the old key was already unusable, and the new plaintext
+     * is returned so the administrator can copy it once.
+     *
+     * @return array{success: bool, error?: string, migrated_count: int, error_count: int, migrated: array<int, array<string, mixed>>, errors: array<int, array<string, mixed>>}
      */
     public function migrate_legacy_keys(): array
     {
         global $wpdb;
 
         if (!$this->table_exists()) {
-            return ['success' => false, 'error' => 'API keys table does not exist', 'migrated' => []];
+            return ['success' => false, 'error' => 'API keys table does not exist', 'migrated_count' => 0, 'error_count' => 1, 'migrated' => [], 'errors' => []];
         }
 
-        Logger::info('Starting migration of legacy API keys', 'ApiKeyManager');
-
-        // This runs during scheduled migrations, never per request. It uses its
-        // own cache key because the selected columns differ from the cached the
-        // request-time key listings, so the two must never share an entry.
-        $migration_cache_key = 'fiveprayer_api_keys_migration';
-        $keys                = wp_cache_get($migration_cache_key, self::CACHE_GROUP);
-
-        if (!is_array($keys)) {
-            $keys = $wpdb->get_results($wpdb->prepare("SELECT id, api_key, name, description, expires_at, created_by FROM %i", $this->table_name)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-            wp_cache_set($migration_cache_key, $keys, self::CACHE_GROUP, self::DATA_CACHE_TTL);
+        if (!$this->has_encryption_salts()) {
+            return ['success' => false, 'error' => 'AUTH_KEY and SECURE_AUTH_KEY must be set in wp-config.php', 'migrated_count' => 0, 'error_count' => 1, 'migrated' => [], 'errors' => []];
         }
+
+        Logger::info('Starting migration of legacy API keys to keyed hashes', 'ApiKeyManager');
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off admin migration.
+        $keys = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, api_key, name FROM %i WHERE key_hash IS NULL",
+            $this->table_name
+        ));
 
         $migrated = [];
         $errors = [];
 
         foreach ($keys as $key) {
-            if (!$this->is_legacy_key($key->api_key)) {
-                continue; // Already migrated
-            }
+            $plaintext = !empty($key->api_key) ? $this->decrypt_key((string) $key->api_key) : '';
+            $new_key = '';
 
-            // Generate a new key with default prefix
-            $new_key = $this->generate_unique_key();
-            $new_key_encrypted = $this->encrypt_key($new_key);
+            if ('' === $plaintext) {
+                // Unrecoverable: issue a fresh key so the row can be used again.
+                $new_key = $this->generate_unique_key();
+                $plaintext = $new_key;
+            }
 
             $result = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                 $this->table_name,
-                ['api_key' => $new_key_encrypted],
-                ['id' => $key->id],
-                ['%s'],
+                ['key_hash' => $this->hash_key($plaintext), 'api_key' => null],
+                ['id' => (int) $key->id],
+                ['%s', '%s'],
                 ['%d']
             );
-
-            // Replaced secrets invalidate every cached key listing.
-            wp_cache_delete($migration_cache_key, self::CACHE_GROUP);
-            wp_cache_delete(self::AUTH_CACHE_KEY, self::CACHE_GROUP);
-            wp_cache_delete(self::STORED_CACHE_KEY, self::CACHE_GROUP);
-            wp_cache_delete(self::LIST_CACHE_KEY, self::CACHE_GROUP);
-            wp_cache_delete('fiveprayer_api_key_secret_' . $key->id, self::CACHE_GROUP);
 
             if ($result === false) {
                 Logger::error('Failed to migrate legacy key ID ' . $key->id . ': ' . $wpdb->last_error, 'ApiKeyManager');
                 $errors[] = ['id' => $key->id, 'name' => $key->name, 'error' => $wpdb->last_error];
-            } else {
-                Logger::info('Migrated legacy key ID ' . $key->id . ' (' . $key->name . ')', 'ApiKeyManager');
-                $migrated[] = [
-                    'id' => $key->id,
-                    'name' => $key->name,
-                    'new_key' => $new_key,
-                ];
+                continue;
             }
+
+            Logger::info('Migrated legacy key ID ' . $key->id . ' (' . $key->name . ')', 'ApiKeyManager');
+            $migrated[] = [
+                'id' => $key->id,
+                'name' => $key->name,
+                'new_key' => $new_key,
+            ];
         }
+
+        $this->flush_key_caches();
 
         Logger::info('Legacy key migration complete. Migrated: ' . count($migrated) . ', Errors: ' . count($errors), 'ApiKeyManager');
 

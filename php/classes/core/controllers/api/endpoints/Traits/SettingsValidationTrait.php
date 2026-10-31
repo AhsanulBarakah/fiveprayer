@@ -18,13 +18,13 @@ trait SettingsValidationTrait
             'printer_right6', 'printer_right7', 'printer_boolean', 'printer_logo'
         ];
 
-        foreach ($required_fields as &$field) {
+        foreach ($required_fields as $field) {
             if (!array_key_exists($field, $value)) {
                 throw new Exception(esc_html("Missing required printer field: $field"));
             }
         }
 
-        foreach ($value as $key => &$val) {
+        foreach ($value as $key => $val) {
             if (is_string($val)) {
                 $value[$key] = sanitize_text_field($val);
             } elseif (is_bool($val)) {
@@ -42,13 +42,13 @@ trait SettingsValidationTrait
             return [];
         }
 
-        foreach ($value as $index => &$location) {
+        foreach ($value as $index => $location) {
             if (!is_array($location)) {
                 throw new Exception(esc_html("Invalid location data at index $index: expected an object"));
             }
 
             $required_fields = ['city', 'country', 'id', 'lat', 'lng'];
-            foreach ($required_fields as &$field) {
+            foreach ($required_fields as $field) {
                 if (!isset($location[$field]) || $location[$field] === '') {
                     throw new Exception(esc_html("Missing or empty required field '$field' in location at index $index"));
                 }

@@ -4,6 +4,35 @@
 
 The FivePrayer API Security system protects your external API endpoints from abuse by detecting and blocking brute force attacks. When an IP address makes too many failed API key attempts, it is temporarily blocked. The system also supports email notifications so you can stay informed about security events.
 
+## Scope and limits
+
+- **IPv6 is counted per /64.** One client normally controls a whole /64, so
+  counting single addresses would let it rotate through the block with a new
+  source address per request. The tracked entry is the /64 network.
+- **The tracked-address list is capped** (500 entries). The oldest entries are
+  pruned when the cap is reached, so an address-cycling attack cannot grow
+  `wp_options` without bound.
+- **“Stopped” escalation resets itself after 24 hours.** When the escalating
+  cooldown reaches its last level, alerts pause; after one day the level clears
+  and alerts resume automatically. The manual Reset button still clears it
+  immediately.
+- **Counters are atomic when a persistent object cache is available.** With
+  Redis/Memcached, failed-attempt and per-key rate counters use
+  `wp_cache_incr()`; without one, the transient is the only available store.
+
+## Allowed Domains is a convenience filter, not a security control
+
+The **Allowed Domains** field compares the `Origin` or `Referer` header. Any
+non-browser client — `curl`, a script, a server integration — can send those
+headers itself, so the check only filters casual cross-origin browser use. It
+cannot authenticate where a request came from.
+
+**Use Allowed IPs for server-to-server integrations.** The client address is
+not chosen by the caller (beyond trusted-proxy configuration the site already
+controls), so it is the restriction that actually holds. Every API key and
+endpoint also requires the secret key itself; Allowed Domains is an additional
+convenience on top, never a substitute.
+
 ## Access
 
 Navigate to **WordPress Admin → FivePrayer → API Security**

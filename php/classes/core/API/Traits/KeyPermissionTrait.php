@@ -17,6 +17,13 @@ trait KeyPermissionTrait
     /**
      * Check if a request is permitted based on the key's domain, IP, and endpoint restrictions.
      *
+     * The Allowed Domains check reads Origin/Referer. Those headers are set by
+     * the caller, so any non-browser client can send whatever it likes: the
+     * check filters casual browser cross-origin use, it does not authenticate
+     * the origin. Server-to-server integrations must use Allowed IPs instead,
+     * because the client address cannot be chosen by the caller (beyond the
+     * trusted-proxy configuration the site already controls).
+     *
      * @param object $key_data Key row from the database.
      * @param array  $server   Server variables (usually $_SERVER).
      * @param string $route    REST route handling the request, when available.

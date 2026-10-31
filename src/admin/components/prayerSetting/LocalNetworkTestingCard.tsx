@@ -52,18 +52,51 @@ const LocalNetworkTestingCard: React.FC = () => {
 	// confirmed answer so the switch can move instantly while saving.
 	const [ enabled, setEnabled ] = React.useState<boolean>( localized?.enabled === true );
 	const [ saving, setSaving ] = React.useState<boolean>( false );
+	const [ hosts, setHosts ] = React.useState<string>( localized?.savedHosts ?? '' );
 
 	React.useEffect( () => {
 		if ( localized ) {
 			setEnabled( localized.enabled === true );
+			setHosts( localized.savedHosts ?? '' );
 		}
-	}, [ localized?.enabled ] );
+	}, [ localized?.enabled, localized?.savedHosts ] );
 
 	// The switch is on but this request did not arrive on a private address, so
 	// nothing is rewritten and another device would get broken links. Surfaced
 	// as the row's second line instead of a line of its own, to keep the row
 	// short.
 	const notRunning = Boolean( enabled && localized && ! localized.requestIsLocal );
+
+	// The Host header is chosen by the visitor. Saving the address the TV uses
+	// here means a request with any other Host cannot switch the router on.
+	const saveHosts = async () => {
+		if ( ! localized ) return;
+
+		setSaving( true );
+		try {
+			const response: any = await apiFetch( {
+				url: window.FivePrayerData?.ajaxUrl || '',
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+				body: new URLSearchParams( {
+					action: localized.ajaxAction,
+					nonce: localized.nonce,
+					enabled: enabled ? '1' : '0',
+					hosts,
+				} ),
+			} );
+
+			const saved = response?.data?.savedHosts ?? hosts;
+			setHosts( saved );
+			toast.success( __( 'Allowed addresses saved', 'fiveprayer' ), {
+				description: __( 'Only these addresses and this server’s own addresses can activate sharing.', 'fiveprayer' ),
+			} );
+		} catch {
+			toast.error( __( 'The addresses could not be saved', 'fiveprayer' ) );
+		} finally {
+			setSaving( false );
+		}
+	};
 
 	const toggle = async () => {
 		if ( ! localized ) return;
@@ -141,6 +174,37 @@ const LocalNetworkTestingCard: React.FC = () => {
 				</p>
 				{/* Same "what off means" line as the Pages/Posts rows, so the three
 				    switches of this page read the same way. */}
+				{ /* Only the hosts saved here, and this server's own addresses, may
+				    activate sharing. The Host header is visitor-controlled, so this
+				    is what keeps an internet visitor from spoofing a private one. */ }
+				{ enabled && (
+					<div className="mt-2">
+						<label className="text-[10px] font-medium text-gray-700" htmlFor="fiveprayer-local-hosts">
+							{ __( 'Addresses allowed to activate sharing', 'fiveprayer' ) }
+						</label>
+						<div className="flex gap-2 mt-1">
+							<input
+								id="fiveprayer-local-hosts"
+								type="text"
+								value={ hosts }
+								onChange={ ( event ) => setHosts( event.target.value ) }
+								placeholder={ localized?.serverAddresses || '192.168.1.104:10010' }
+								className="h-8 min-w-0 flex-1 rounded-md border border-gray-300 px-2 text-xs"
+							/>
+							<button
+								type="button"
+								onClick={ saveHosts }
+								disabled={ saving }
+								className="h-8 px-3 rounded-md border border-gray-300 text-xs font-medium disabled:opacity-60"
+							>
+								{ __( 'Save', 'fiveprayer' ) }
+							</button>
+						</div>
+						<p className="text-[10px] text-gray-500 mt-1">
+							{ __( 'Comma-separated host or host:port. This server’s own addresses are always accepted. A request with any other Host header never activates sharing.', 'fiveprayer' ) }
+						</p>
+					</div>
+				) }
 				{ ! enabled && (
 					<p className="text-[10px] text-amber-700 mt-1">
 						{ __( 'Off — the site answers only on this computer, so the TV, phone or tablet on your network cannot open it. Switch it on and leave it on to share the display.', 'fiveprayer' ) }

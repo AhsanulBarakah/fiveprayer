@@ -51,6 +51,6 @@ trait CacheHandlerTrait
         if (function_exists('fiveprayer_force_clear_all_caches')) {
             fiveprayer_force_clear_all_caches();
         }
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('All caches cleared successfully. Time-sensitive content should now update properly.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'cache_cleared', 'translations');
     }
 }

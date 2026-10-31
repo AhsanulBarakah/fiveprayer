@@ -209,22 +209,13 @@ trait ApiAdminAjaxHandlerTrait
             wp_send_json_error(['message' => esc_html__('Invalid key ID', 'fiveprayer')]);
         }
 
-        Logger::info('Fetching full API key for copy with ID: ' . $key_id, 'ApiAdmin');
+        // Only a keyed hash is stored, so a key created by this version cannot
+        // be read back. The plaintext is shown once in the create/regenerate
+        // response; regenerating is the supported way to get a fresh copy.
+        Logger::info('Refused to reveal a stored API key with ID: ' . $key_id, 'ApiAdmin');
 
-        $full_key = $this->api_key_manager->get_full_key($key_id);
-
-        if ($full_key === null) {
-            Logger::error('API key not found for copy with ID: ' . $key_id, 'ApiAdmin');
-            wp_send_json_error(['message' => esc_html__('API key not found', 'fiveprayer')]);
-        }
-
-        if ($full_key === '') {
-            Logger::error('API key is empty (likely stored in legacy hash format) for ID: ' . $key_id, 'ApiAdmin');
-            wp_send_json_error(['message' => esc_html__('This key was stored in an older format and cannot be retrieved. Try regenerating it.', 'fiveprayer')]);
-        }
-
-        wp_send_json_success([
-            'api_key' => $full_key,
+        wp_send_json_error([
+            'message' => esc_html__('API keys can only be copied once, when they are created. Regenerate this key to get a new one.', 'fiveprayer'),
         ]);
     }
 

@@ -134,7 +134,7 @@ class DynamicTextParser {
         // Also include patterns from DynamicContent methods
         $methods = get_class_methods(DynamicContent::class);
 
-        foreach ($methods as &$method) {
+        foreach ($methods as $method) {
             if (strpos($method, 'get_') === 0) {
                 $pattern = substr($method, 4); // Remove 'get_' prefix
                 if (!in_array('fp_' . $pattern, $patterns)) { // Avoid duplicates

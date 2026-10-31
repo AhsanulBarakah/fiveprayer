@@ -16,7 +16,7 @@ trait UiRendererTrait
         ];
         $current = $this->get_current_tab();
         echo '<h2 class="nav-tab-wrapper">';
-        foreach ($tabs as $key => &$label) {
+        foreach ($tabs as $key => $label) {
             $class = ($current === $key) ? ' nav-tab nav-tab-active' : ' nav-tab';
             $url = add_query_arg(['page' => 'fiveprayer-settings', 'tab' => $key], admin_url('admin.php'));
             printf('<a href="%s" class="%s">%s</a>', esc_url($url), esc_attr($class), esc_html($label));
@@ -36,7 +36,11 @@ trait UiRendererTrait
 
     private function render_toast_notification(): void
     {
-        $fp_msg      = SecurityHelper::get_sanitized_get_input('fp_msg');
+        // Same allowlist as the admin notice: the URL carries a code, never
+        // message text, so only known strings are rendered.
+        $fp_msg      = \FivePrayer\Core\Admin\SettingsAdmin::get_notice_message(
+            sanitize_key((string) SecurityHelper::get_sanitized_get_input('fp_msg'))
+        );
         $has_updated = SecurityHelper::has_query_arg('updated');
         $has_error   = SecurityHelper::has_query_arg('error');
 

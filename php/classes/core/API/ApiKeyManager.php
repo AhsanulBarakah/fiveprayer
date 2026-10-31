@@ -126,23 +126,37 @@ class ApiKeyManager
             return ['success' => false, 'error' => 'API keys table does not exist'];
         }
 
+        // A keyed hash needs the site's salts. Without them every install would
+        // share the same key material, so no key is created at all.
+        if (!$this->has_encryption_salts()) {
+            Logger::error('Cannot create an API key: AUTH_KEY and SECURE_AUTH_KEY are not set in wp-config.php.', 'ApiKeyManager');
+            return ['success' => false, 'error' => 'AUTH_KEY and SECURE_AUTH_KEY must be set in wp-config.php before API keys can be created.'];
+        }
+
         Logger::info('Attempting to generate new API key for: ' . $name, 'ApiKeyManager');
 
         $api_key = $this->generate_unique_key($prefix);
-        $api_key_encrypted = $this->encrypt_key($api_key);
 
-        // Check which columns exist in the table
+        // Check which columns exist in the table. A table created by an older
+        // version has no key_hash column until the schema upgrade has run.
         $columns = $this->table_columns();
+        if (!in_array('key_hash', $columns, true)) {
+            Logger::error('API keys table is missing the key_hash column. Please run plugin activation.', 'ApiKeyManager');
+            return ['success' => false, 'error' => 'API keys table needs an upgrade'];
+        }
+
         $has_permissions = in_array('allowed_domains', $columns);
 
-        // Build data and format arrays together to keep them in sync
+        // Build data and format arrays together to keep them in sync. Only the
+        // hash is stored: the plain key exists in this response and nowhere else.
         $data = [
-            'api_key' => $api_key_encrypted,
+            'api_key' => null,
+            'key_hash' => $this->hash_key($api_key),
             'name' => sanitize_text_field($name),
             'description' => sanitize_textarea_field($description),
             'created_by' => get_current_user_id(),
         ];
-        $format = ['%s', '%s', '%s', '%d'];
+        $format = ['%s', '%s', '%s', '%s', '%d'];
 
         // Add optional fields only if they exist (append incrementally to keep format in sync)
         if ($has_permissions) {
@@ -493,16 +507,19 @@ class ApiKeyManager
             return ['success' => false, 'error' => 'API key not found'];
         }
 
+        if (!$this->has_encryption_salts()) {
+            return ['success' => false, 'error' => 'AUTH_KEY and SECURE_AUTH_KEY must be set in wp-config.php before API keys can be created.'];
+        }
+
         // Generate new key (use existing name as hint for prefix, but default to fp_)
         $new_key = $this->generate_unique_key();
-        $new_key_encrypted = $this->encrypt_key($new_key);
 
-        // Update the existing record with the new encrypted key
+        // Only the hash replaces the old value; the plaintext is returned once.
         $result = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
             $this->table_name,
-            ['api_key' => $new_key_encrypted],
+            ['api_key' => null, 'key_hash' => $this->hash_key($new_key)],
             ['id' => $key_id],
-            ['%s'],
+            ['%s', '%s'],
             ['%d']
         );
 
@@ -525,39 +542,82 @@ class ApiKeyManager
     }
 
     /**
-     * Get the full plaintext API key by ID (for copy functionality).
-     * Never displays the key – only returns it for the server-side clipboard
-     * response and for the masked prefix on the key list.
+     * Legacy accessor for the plaintext key by ID.
      *
-     * The plaintext is deliberately not cached: with a persistent object cache
-     * every key on the admin screen would otherwise be written to Redis or
-     * Memcached in clear text for the lifetime of the entry. The lookup only
-     * happens on admin screens and on an explicit copy request, so the extra
-     * query costs nothing on the front end.
+     * Keys are stored as a keyed hash, so the plaintext no longer exists on the
+     * server after the creation response. This method is kept so older callers
+     * fail closed instead of erroring: it always returns null.
+     *
+     * @deprecated 3.1.0 Keys are shown once, when they are created.
      */
     public function get_full_key(int $key_id): ?string
+    {
+        return null;
+    }
+
+    /**
+     * One-time migration from reversible storage to keyed hashes.
+     *
+     * Reads every row that still carries ciphertext, decrypts it once with the
+     * legacy method, writes its hash and clears the ciphertext. Rows whose
+     * value cannot be decrypted (legacy SHA-256 hashes, rotated salts) keep
+     * their value and no hash: they cannot be used, and has_legacy_keys() keeps
+     * reporting them so the admin can regenerate them explicitly.
+     *
+     * @return int|false Number of rows hashed, or false when the salts are missing.
+     */
+    public function migrate_existing_keys_to_hashes()
     {
         global $wpdb;
 
         if (!$this->table_exists()) {
-            Logger::error('API keys table does not exist. Cannot retrieve API key.', 'ApiKeyManager');
-            return null;
+            return 0;
         }
 
-        // The plaintext is deliberately not cached (see the method docblock), so
-        // this lookup is intentionally uncached as well.
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Admin-only lookup; caching the decrypted key is exactly what this method avoids.
-        $stored = $wpdb->get_var($wpdb->prepare(
-            "SELECT api_key FROM %i WHERE id = %d",
-            $this->table_name,
-            $key_id
+        $columns = $this->table_columns();
+        if (!in_array('key_hash', $columns, true) || !in_array('api_key', $columns, true)) {
+            return 0;
+        }
+
+        if (!$this->has_encryption_salts()) {
+            Logger::warning('Skipping API key hash migration: AUTH_KEY and SECURE_AUTH_KEY are not set.', 'ApiKeyManager');
+            return false;
+        }
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration; only this run reads the ciphertext.
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, api_key FROM %i WHERE key_hash IS NULL AND api_key IS NOT NULL AND api_key <> ''",
+            $this->table_name
         ));
 
-        if ($stored === null) {
-            return null;
+        $migrated = 0;
+
+        foreach ($rows as $row) {
+            $plaintext = $this->decrypt_key((string) $row->api_key);
+
+            if ('' === $plaintext) {
+                Logger::warning('API key ID ' . $row->id . ' could not be decrypted and must be regenerated.', 'ApiKeyManager');
+                continue;
+            }
+
+            $updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+                $this->table_name,
+                ['key_hash' => $this->hash_key($plaintext), 'api_key' => null],
+                ['id' => (int) $row->id],
+                ['%s', '%s'],
+                ['%d']
+            );
+
+            if (false !== $updated) {
+                ++$migrated;
+            }
         }
 
-        return $this->decrypt_key($stored);
+        $this->flush_key_caches();
+
+        Logger::info('API key hash migration hashed ' . $migrated . ' key(s).', 'ApiKeyManager');
+
+        return $migrated;
     }
 
     private function generate_unique_key(string $prefix = 'fp_'): string
@@ -601,20 +661,18 @@ class ApiKeyManager
             return false;
         }
 
-        // Retrieve all stored keys and check if any decrypt to the same value
-        $stored_keys = wp_cache_get(self::STORED_CACHE_KEY, self::CACHE_GROUP);
+        // A single indexed lookup against the unique key_hash column replaces
+        // decrypting every stored key to compare it.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Collision check on the write path; the unique index makes it cheap.
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM %i WHERE key_hash = %s LIMIT 1",
+            $this->table_name,
+            $this->hash_key($api_key)
+        ));
 
-        if (!is_array($stored_keys)) {
-            $stored_keys = $wpdb->get_col($wpdb->prepare("SELECT api_key FROM %i", $this->table_name)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-            wp_cache_set(self::STORED_CACHE_KEY, $stored_keys, self::CACHE_GROUP, self::DATA_CACHE_TTL);
-        }
-
-        foreach ($stored_keys as $stored) {
-            $decrypted = $this->decrypt_key($stored);
-            if (hash_equals($decrypted, $api_key)) {
-                Logger::debug('API key collision detected: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
-                return true;
-            }
+        if (null !== $existing) {
+            Logger::debug('API key collision detected: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
+            return true;
         }
 
         return false;

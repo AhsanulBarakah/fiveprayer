@@ -108,14 +108,16 @@ class LocalTestingMode
         $request_local = (null !== $host) && LocalNetworkRouter::is_local_host($host);
 
         return [
-            'enabled'        => LocalNetworkRouter::is_enabled(),
-            'active'         => LocalNetworkRouter::is_active(),
-            'host'           => null !== $host ? $host : '',
-            'requestIsLocal' => $request_local,
-            'nonce'          => wp_create_nonce(self::NONCE_ACTION),
-            'ajaxAction'     => self::AJAX_ACTION,
-            'optionName'     => self::OPTION_NAME,
-            'settingsHash'   => self::SETTINGS_HASH,
+            'enabled'         => LocalNetworkRouter::is_enabled(),
+            'active'          => LocalNetworkRouter::is_active(),
+            'host'            => null !== $host ? $host : '',
+            'requestIsLocal'  => $request_local,
+            'savedHosts'      => implode(', ', LocalNetworkRouter::get_saved_hosts()),
+            'serverAddresses' => implode(', ', LocalNetworkRouter::get_server_addresses()),
+            'nonce'           => wp_create_nonce(self::NONCE_ACTION),
+            'ajaxAction'      => self::AJAX_ACTION,
+            'optionName'      => self::OPTION_NAME,
+            'settingsHash'    => self::SETTINGS_HASH,
         ];
     }
 
@@ -156,9 +158,28 @@ class LocalTestingMode
 
         update_option(self::OPTION_NAME, $enabled);
 
+        // Optional list of host names / addresses this server may answer on.
+        // The router also always accepts the server's own addresses; this list
+        // covers hostnames (LocalWP, a .local name) and a fixed LAN address.
+        if (array_key_exists('hosts', $_POST)) {
+            $raw_hosts = sanitize_textarea_field(wp_unslash((string) $_POST['hosts']));
+            $parts     = preg_split('/[\r\n,]+/', $raw_hosts);
+            $hosts     = [];
+
+            foreach (is_array($parts) ? $parts : [] as $part) {
+                $part = strtolower(trim((string) $part));
+                if ('' !== $part && preg_match('/^[a-z0-9\[\]\-\.:_]+$/', $part)) {
+                    $hosts[] = $part;
+                }
+            }
+
+            update_option(LocalNetworkRouter::HOSTS_OPTION, implode(',', array_values(array_unique($hosts))));
+        }
+
         wp_send_json_success([
-            'enabled' => 1 === $enabled,
-            'message' => $enabled
+            'enabled'    => 1 === $enabled,
+            'savedHosts' => implode(', ', LocalNetworkRouter::get_saved_hosts()),
+            'message'    => $enabled
                 ? __('Share on Local Network enabled. The TV, phone or tablet on your network can open this site with this computer’s network address.', 'fiveprayer')
                 : __('Share on Local Network disabled. Only this computer can open the site now.', 'fiveprayer'),
         ]);

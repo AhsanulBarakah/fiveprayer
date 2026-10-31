@@ -189,6 +189,114 @@ if (file_exists($fiveprayer_log_dir . '.htaccess')) {
     fiveprayer_assert(false !== strpos($fiveprayer_rules, 'Require all denied'), 'the Apache rule denies direct access');
 }
 
+// Log lines must not carry e-mail addresses or API keys.
+$fiveprayer_redact = new ReflectionMethod(Logger::class, 'redact');
+$fiveprayer_redact->setAccessible(true);
+$fiveprayer_log_line = $fiveprayer_redact->invoke(
+    null,
+    'Test email to mosque@example.com with key fp_0123456789abcdef0123456789abcdef failed'
+);
+fiveprayer_assert(false === strpos($fiveprayer_log_line, 'mosque@example.com'), 'an e-mail address is redacted from log lines');
+fiveprayer_assert(false === strpos($fiveprayer_log_line, 'fp_0123456789abcdef0123456789abcdef'), 'an API key is redacted from log lines');
+fiveprayer_assert(false !== strpos($fiveprayer_log_line, '[redacted-email]'), 'the e-mail redaction marker is present');
+
+// ---------------------------------------------------------------------------
+// Uninstall cleanup coverage
+// ---------------------------------------------------------------------------
+
+// Every option / transient the plugin writes has to be removed when
+// "Delete all data on uninstall" is on. This walks the code and checks each
+// literal name against the cleanup list in uninstall.php.
+$fiveprayer_plugin_root      = dirname(__DIR__, 2);
+$fiveprayer_uninstall_source = (string) file_get_contents($fiveprayer_plugin_root . '/uninstall.php');
+
+preg_match_all("/esc_like\\('([^']+)'\\)/", $fiveprayer_uninstall_source, $fiveprayer_pattern_matches);
+$fiveprayer_uninstall_prefixes = $fiveprayer_pattern_matches[1] ?? [];
+
+preg_match_all("/'(fp_[a-z0-9_]+)'/", $fiveprayer_uninstall_source, $fiveprayer_exact_matches);
+$fiveprayer_uninstall_exact = array_values(array_unique($fiveprayer_exact_matches[1] ?? []));
+
+$fiveprayer_is_covered = static function (string $name) use ($fiveprayer_uninstall_prefixes, $fiveprayer_uninstall_exact): bool {
+    if (in_array($name, $fiveprayer_uninstall_exact, true)) {
+        return true;
+    }
+
+    foreach ($fiveprayer_uninstall_prefixes as $fiveprayer_prefix) {
+        if (0 === strpos($name, $fiveprayer_prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+foreach (['fp_brute_force_settings', 'fp_brute_cooldown_level', 'fp_brute_email_cooldown', 'fp_mosque_address', 'fp_mosque_phone', 'fp_mosque_website', 'fp_notice_dismissed_until'] as $fiveprayer_required) {
+    fiveprayer_assert($fiveprayer_is_covered($fiveprayer_required), 'uninstall cleanup covers ' . $fiveprayer_required);
+}
+
+fiveprayer_assert(
+    in_array('_transient_fp_brute_', $fiveprayer_uninstall_prefixes, true),
+    'uninstall cleanup deletes every per-address brute-force transient'
+);
+fiveprayer_assert(
+    in_array('_transient_timeout_fp_brute_', $fiveprayer_uninstall_prefixes, true),
+    'uninstall cleanup deletes every brute-force transient timeout row'
+);
+
+// Options owned by WordPress or another plugin must never be deleted.
+$fiveprayer_foreign_options = [
+    'time_format', 'date_format', 'timezone_string', 'gmt_offset', 'admin_email',
+    'permalink_structure', '_transient_timeout',
+];
+
+$fiveprayer_option_calls = [];
+$fiveprayer_php_files    = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($fiveprayer_plugin_root . '/php', FilesystemIterator::SKIP_DOTS)
+);
+
+foreach ($fiveprayer_php_files as $fiveprayer_php_file) {
+    if ('php' !== strtolower($fiveprayer_php_file->getExtension())) {
+        continue;
+    }
+
+    $fiveprayer_php_source = (string) file_get_contents($fiveprayer_php_file->getPathname());
+    preg_match_all(
+        "/(?:get_option|update_option|add_option|delete_option|get_transient|set_transient|delete_transient)\\s*\\(\\s*'([^']+)'/",
+        $fiveprayer_php_source,
+        $fiveprayer_call_matches
+    );
+
+    foreach ($fiveprayer_call_matches[1] ?? [] as $fiveprayer_call_name) {
+        $fiveprayer_option_calls[$fiveprayer_call_name] = true;
+    }
+}
+
+$fiveprayer_uncovered = [];
+
+foreach (array_keys($fiveprayer_option_calls) as $fiveprayer_call_name) {
+    if (in_array($fiveprayer_call_name, $fiveprayer_foreign_options, true)
+        || 0 === strpos($fiveprayer_call_name, 'litespeed.')
+        || 0 === strpos($fiveprayer_call_name, 'w3tc_config_')) {
+        continue;
+    }
+
+    $fiveprayer_owned = 0 === strpos($fiveprayer_call_name, 'fiveprayer_')
+        || 0 === strpos($fiveprayer_call_name, 'ifiiri_fiveprayer_')
+        || 0 === strpos($fiveprayer_call_name, 'fp_')
+        || 0 === strpos($fiveprayer_call_name, '_transient_fp_')
+        || 0 === strpos($fiveprayer_call_name, '_transient_timeout_fp_');
+
+    if ($fiveprayer_owned && !$fiveprayer_is_covered($fiveprayer_call_name)) {
+        $fiveprayer_uncovered[] = $fiveprayer_call_name;
+    }
+}
+
+fiveprayer_assert(
+    [] === $fiveprayer_uncovered,
+    'every plugin option and transient literal in php/ is covered by uninstall cleanup'
+        . ($fiveprayer_uncovered ? ' (missing: ' . implode(', ', $fiveprayer_uncovered) . ')' : '')
+);
+
 // ---------------------------------------------------------------------------
 // API key lifecycle
 // ---------------------------------------------------------------------------
@@ -354,7 +462,23 @@ if (!$fiveprayer_keys_ready) {
         // KEY_LENGTH is the number of random bytes requested, and half of it is
         // passed to random_bytes(), so a key carries 128 bits of entropy.
         fiveprayer_assert(1 === preg_match('/^fp_[0-9a-f]{32}$/', $fiveprayer_raw_key), 'a generated API key is 128 random bits in hex');
-        fiveprayer_assert($fiveprayer_raw_key === $fiveprayer_manager->get_full_key($fiveprayer_key_id), 'the stored key decrypts back to the generated value');
+        // Only a keyed hash is stored: the plaintext must not be readable back.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- test reads the real row.
+        $fiveprayer_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT api_key, key_hash FROM %i WHERE id = %d",
+            $fiveprayer_keys_table,
+            $fiveprayer_key_id
+        ));
+
+        fiveprayer_assert(null === $fiveprayer_manager->get_full_key($fiveprayer_key_id), 'the plaintext key cannot be read back from storage');
+        fiveprayer_assert(
+            $fiveprayer_row && hash_equals(hash_hmac('sha256', $fiveprayer_raw_key, wp_salt('auth')), (string) $fiveprayer_row->key_hash),
+            'the stored value is the keyed hash of the generated key'
+        );
+        fiveprayer_assert(
+            $fiveprayer_row && (null === $fiveprayer_row->api_key || '' === $fiveprayer_row->api_key),
+            'the reversible api_key column is cleared'
+        );
         fiveprayer_assert(
             false === wp_cache_get('fiveprayer_api_key_secret_' . $fiveprayer_key_id, 'fiveprayer'),
             'the plaintext key is not written to the object cache'
@@ -363,10 +487,26 @@ if (!$fiveprayer_keys_ready) {
         $fiveprayer_valid = $fiveprayer_manager->validate_key($fiveprayer_raw_key);
         fiveprayer_assert(true === $fiveprayer_valid['valid'], 'a freshly generated key authenticates');
 
-        fiveprayer_assert(false === $fiveprayer_manager->validate_key($fiveprayer_raw_key . 'x')['valid'], 'a modified key does not authenticate');
+        $fiveprayer_modified = $fiveprayer_manager->validate_key($fiveprayer_raw_key . 'x');
+        fiveprayer_assert(false === $fiveprayer_modified['valid'], 'a modified key does not authenticate');
+        fiveprayer_assert('Invalid API key' === $fiveprayer_modified['error'], 'an unknown key answers with the generic message');
 
         fiveprayer_assert(true === $fiveprayer_manager->revoke_key($fiveprayer_key_id), 'a key can be revoked');
-        fiveprayer_assert(false === $fiveprayer_manager->validate_key($fiveprayer_raw_key)['valid'], 'a revoked key stops authenticating immediately');
+
+        $fiveprayer_revoked = $fiveprayer_manager->validate_key($fiveprayer_raw_key);
+        fiveprayer_assert(false === $fiveprayer_revoked['valid'], 'a revoked key stops authenticating immediately');
+        fiveprayer_assert('Invalid API key' === $fiveprayer_revoked['error'], 'a revoked key answers with the same generic message as an unknown key');
+
+        // Expired keys must be indistinguishable from unknown and revoked ones.
+        $fiveprayer_expired = $fiveprayer_manager->generate_key('fp audit expired key', '', '2000-01-01 00:00:00');
+        if (empty($fiveprayer_expired['success'])) {
+            fiveprayer_assert(false, 'an expiring key could be generated');
+        } else {
+            $fiveprayer_expired_result = $fiveprayer_manager->validate_key((string) $fiveprayer_expired['api_key']);
+            fiveprayer_assert(false === $fiveprayer_expired_result['valid'], 'an expired key does not authenticate');
+            fiveprayer_assert('Invalid API key' === $fiveprayer_expired_result['error'], 'an expired key answers with the same generic message');
+            $fiveprayer_manager->delete_key((int) $fiveprayer_expired['id']);
+        }
 
         fiveprayer_assert(true === $fiveprayer_manager->delete_key($fiveprayer_key_id), 'a key can be deleted');
         fiveprayer_assert(null === $fiveprayer_manager->get_key($fiveprayer_key_id), 'a deleted key is gone from the cache and the table');
@@ -436,6 +576,50 @@ if (!$fiveprayer_keys_ready) {
                 $wpdb->delete($fiveprayer_keys_table, ['id' => (int) $fiveprayer_blank['id']], ['%d']);
             }
         }
+
+        // The one-time migration reads AES rows written by an older version,
+        // writes their hash and clears the ciphertext.
+        $fiveprayer_legacy_plain = 'fp_' . bin2hex(random_bytes(16));
+        $fiveprayer_legacy_aes   = hash('sha256', AUTH_KEY . SECURE_AUTH_KEY . 'fiveprayer-api-key-encryption', true);
+        $fiveprayer_legacy_iv    = random_bytes((int) openssl_cipher_iv_length('aes-256-cbc'));
+        $fiveprayer_legacy_blob  = base64_encode(
+            $fiveprayer_legacy_iv
+            . openssl_encrypt($fiveprayer_legacy_plain, 'aes-256-cbc', $fiveprayer_legacy_aes, OPENSSL_RAW_DATA, $fiveprayer_legacy_iv)
+        );
+
+        $wpdb->insert($fiveprayer_keys_table, [ // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+            'api_key'    => $fiveprayer_legacy_blob,
+            'key_hash'   => null,
+            'name'       => 'fp audit legacy key',
+            'created_by' => 0,
+        ]);
+        $fiveprayer_legacy_id = (int) $wpdb->insert_id;
+
+        $fiveprayer_migrated = $fiveprayer_manager->migrate_existing_keys_to_hashes();
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- test reads the real row.
+        $fiveprayer_legacy_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT api_key, key_hash FROM %i WHERE id = %d",
+            $fiveprayer_keys_table,
+            $fiveprayer_legacy_id
+        ));
+
+        fiveprayer_assert(false !== $fiveprayer_migrated, 'the legacy migration runs when the salts are present');
+        fiveprayer_assert(
+            $fiveprayer_legacy_row && hash_equals(hash_hmac('sha256', $fiveprayer_legacy_plain, wp_salt('auth')), (string) $fiveprayer_legacy_row->key_hash),
+            'a legacy encrypted row is migrated to its keyed hash'
+        );
+        fiveprayer_assert(
+            $fiveprayer_legacy_row && (null === $fiveprayer_legacy_row->api_key || '' === $fiveprayer_legacy_row->api_key),
+            'the legacy ciphertext is cleared after migration'
+        );
+        fiveprayer_assert(
+            true === $fiveprayer_manager->validate_key($fiveprayer_legacy_plain)['valid'],
+            'a migrated legacy key still authenticates with its original value'
+        );
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- test cleanup must delete the real row.
+        $wpdb->delete($fiveprayer_keys_table, ['id' => $fiveprayer_legacy_id], ['%d']);
 
         // Cleanup: the revoked row is removed above; make sure nothing lingers.
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- test cleanup must delete the real row.
@@ -617,6 +801,133 @@ fiveprayer_assert('Isha' === $fiveprayer_clean_setting['nested']['label'], 'nest
 fiveprayer_assert(['label', 'count', 'enabled', 'nested'] === array_keys($fiveprayer_clean_setting), 'array keys are kept');
 
 // ---------------------------------------------------------------------------
+// Public settings response
+// ---------------------------------------------------------------------------
+
+// The GET route is public for page builders, but an anonymous caller must not
+// receive the full editor settings set.
+$fiveprayer_meta_table   = $wpdb->prefix . 'fp_prayer_settings_meta';
+$fiveprayer_printer_row  = $wpdb->get_var($wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- test probes the real row.
+    "SELECT id FROM %i WHERE `meta-key` = %s LIMIT 1",
+    $fiveprayer_meta_table,
+    'printer'
+));
+$fiveprayer_inserted_printer = false;
+
+if (null === $fiveprayer_printer_row) {
+    $wpdb->insert($fiveprayer_meta_table, ['meta-key' => 'printer', 'value' => '{}', 'version' => 'test']); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+    $fiveprayer_inserted_printer = true;
+}
+
+$fiveprayer_settings_controller = new PrayerSettingsMetaController();
+$fiveprayer_admins = get_users(['role' => 'administrator', 'number' => 1, 'fields' => 'ID']);
+$fiveprayer_admin_id = !empty($fiveprayer_admins) ? (int) $fiveprayer_admins[0] : 0;
+
+// The meta list is cached; drop it so the row inserted above is visible.
+\FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
+
+wp_set_current_user(0);
+$fiveprayer_public_settings = $fiveprayer_settings_controller->get_meta()->get_data();
+$fiveprayer_public_keys     = array_column((array) $fiveprayer_public_settings, 'meta_key');
+
+fiveprayer_assert(!in_array('printer', $fiveprayer_public_keys, true), 'an anonymous settings response excludes editor-only keys');
+fiveprayer_assert(
+    [] === array_diff($fiveprayer_public_keys, PrayerSettingsMetaController::PUBLIC_META_KEYS),
+    'an anonymous settings response contains only the display allowlist'
+);
+
+wp_set_current_user($fiveprayer_admin_id);
+\FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
+$fiveprayer_admin_settings = $fiveprayer_settings_controller->get_meta()->get_data();
+$fiveprayer_admin_keys     = array_column((array) $fiveprayer_admin_settings, 'meta_key');
+
+fiveprayer_assert($fiveprayer_admin_id > 0 && in_array('printer', $fiveprayer_admin_keys, true), 'an administrator still receives the full settings set');
+
+wp_set_current_user(0);
+
+if ($fiveprayer_inserted_printer) {
+    $wpdb->delete($fiveprayer_meta_table, ['meta-key' => 'printer'], ['%s']); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+    \FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
+}
+
+// ---------------------------------------------------------------------------
+// External test endpoint
+// ---------------------------------------------------------------------------
+
+// The unauthenticated health route used to expose mosque contact details.
+$fiveprayer_external_test = new \FivePrayer\Core\Controllers\API\EndPoints\ExternalApiController();
+$fiveprayer_test_response = $fiveprayer_external_test->test_endpoint(
+    new WP_REST_Request('GET', '/fiveprayer/v1/external/test')
+);
+$fiveprayer_test_data = $fiveprayer_test_response->get_data();
+
+fiveprayer_assert(isset($fiveprayer_test_data['status']) && 'ok' === $fiveprayer_test_data['status'], 'the unauthenticated test endpoint returns a health status');
+fiveprayer_assert(!isset($fiveprayer_test_data['mosque_info']), 'the unauthenticated test endpoint does not return mosque contact details');
+
+// ---------------------------------------------------------------------------
+// Settings reset encoding
+// ---------------------------------------------------------------------------
+
+// The soft reset used to run sanitize_text_field() over the JSON string, which
+// stripped percent sequences and tags out of the payload.
+$fiveprayer_shared_trait = new class {
+    use \FivePrayer\Core\Admin\Traits\SettingsDataManagementTrait;
+};
+
+$fiveprayer_settings_encoder = new ReflectionMethod($fiveprayer_shared_trait, 'encode_settings_value');
+$fiveprayer_settings_encoder->setAccessible(true);
+
+$fiveprayer_encoded = $fiveprayer_settings_encoder->invoke(
+    $fiveprayer_shared_trait,
+    [['id' => 1, 'label' => '50%20 <b>off</b>']]
+);
+$fiveprayer_decoded = json_decode($fiveprayer_encoded, true);
+
+fiveprayer_assert(JSON_ERROR_NONE === json_last_error(), 'a settings value with %20 and < is stored as valid JSON');
+fiveprayer_assert(is_array($fiveprayer_decoded) && isset($fiveprayer_decoded[0]['label']), 'the encoded settings value keeps its shape');
+fiveprayer_assert(false !== strpos($fiveprayer_encoded, '%20'), 'a percent sequence survives settings encoding');
+fiveprayer_assert(false !== strpos($fiveprayer_encoded, '<'), 'an angle bracket does not corrupt the encoded JSON');
+
+// ---------------------------------------------------------------------------
+// Admin notice allowlist
+// ---------------------------------------------------------------------------
+
+fiveprayer_assert('' !== \FivePrayer\Core\Admin\SettingsAdmin::get_notice_message('upload_failed'), 'a known notice code resolves to text');
+fiveprayer_assert('' === \FivePrayer\Core\Admin\SettingsAdmin::get_notice_message('arbitrary_message'), 'an unknown notice code renders nothing');
+
+// ---------------------------------------------------------------------------
+// Brute-force address scope and escalation reset
+// ---------------------------------------------------------------------------
+
+$fiveprayer_brute = \FivePrayer\Core\API\BruteForceSettings::class;
+
+fiveprayer_assert(
+    '2001:db8:1:2::' === $fiveprayer_brute::get_tracked_address('2001:db8:1:2:aaaa:bbbb:cccc:dddd'),
+    'an IPv6 address is tracked by its /64 network'
+);
+fiveprayer_assert(
+    $fiveprayer_brute::get_transient_key('2001:db8:1:2:1::1') === $fiveprayer_brute::get_transient_key('2001:db8:1:2:2::2'),
+    'two addresses in the same IPv6 /64 share one counter'
+);
+fiveprayer_assert(
+    $fiveprayer_brute::get_transient_key('203.0.113.7') === 'fp_brute_203.0.113.7',
+    'an IPv4 address is still tracked individually'
+);
+
+update_option($fiveprayer_brute::COOLDOWN_LEVEL_OPTION, 'stopped');
+update_option($fiveprayer_brute::STOPPED_OPTION, time() - (2 * DAY_IN_SECONDS));
+$fiveprayer_brute::maybe_reset_stopped_level();
+fiveprayer_assert(false === get_option($fiveprayer_brute::COOLDOWN_LEVEL_OPTION), 'a stopped escalation resets itself after 24 hours');
+
+update_option($fiveprayer_brute::COOLDOWN_LEVEL_OPTION, 'stopped');
+update_option($fiveprayer_brute::STOPPED_OPTION, time());
+$fiveprayer_brute::maybe_reset_stopped_level();
+fiveprayer_assert('stopped' === get_option($fiveprayer_brute::COOLDOWN_LEVEL_OPTION), 'a recent stopped escalation is left in place');
+
+delete_option($fiveprayer_brute::COOLDOWN_LEVEL_OPTION);
+delete_option($fiveprayer_brute::STOPPED_OPTION);
+
+// ---------------------------------------------------------------------------
 // Share on Local Network
 // ---------------------------------------------------------------------------
 
@@ -648,6 +959,19 @@ $fiveprayer_reset_router = static function () use ($fiveprayer_router_class) {
 };
 
 update_option(LocalNetworkRouter::OPTION_NAME, 1);
+update_option(LocalNetworkRouter::HOSTS_OPTION, '192.168.1.104:10010');
+
+$fiveprayer_server_ips = static function () {
+    return ['10.0.0.2'];
+};
+add_filter('fiveprayer_local_testing_server_ips', $fiveprayer_server_ips);
+
+// The Host header is visitor-controlled. Only the saved host and the server's
+// own addresses may activate the router; any other host is refused.
+fiveprayer_assert(true === LocalNetworkRouter::is_allowed_host('192.168.1.104:10010'), 'a host saved by the administrator is accepted');
+fiveprayer_assert(true === LocalNetworkRouter::is_allowed_host('10.0.0.2'), 'the server’s own address is accepted without saving it');
+fiveprayer_assert(false === LocalNetworkRouter::is_allowed_host('192.168.1.99:10010'), 'a private host the administrator did not save is refused');
+fiveprayer_assert(false === LocalNetworkRouter::is_allowed_host('evil.example.com'), 'a public host is refused');
 
 $_SERVER['HTTP_HOST']   = '192.168.1.104:10010';
 $_SERVER['REMOTE_ADDR'] = '203.0.113.10';
@@ -655,20 +979,29 @@ $fiveprayer_reset_router();
 LocalNetworkRouter::bootstrap();
 fiveprayer_assert(false === LocalNetworkRouter::is_active(), 'a private Host from a public client does not activate the router');
 
+$_SERVER['HTTP_HOST']   = '192.168.1.99:10010';
+$_SERVER['REMOTE_ADDR'] = '192.168.1.20';
+$fiveprayer_reset_router();
+LocalNetworkRouter::bootstrap();
+fiveprayer_assert(false === LocalNetworkRouter::is_active(), 'an unsaved private Host from a local client does not activate the router');
+
+$_SERVER['HTTP_HOST']   = '192.168.1.104:10010';
 $_SERVER['REMOTE_ADDR'] = '192.168.1.20';
 $fiveprayer_reset_router();
 LocalNetworkRouter::bootstrap();
 
-if (defined('WP_ENVIRONMENT_TYPE') && 'production' === strtolower((string) WP_ENVIRONMENT_TYPE)) {
+if ('production' === strtolower((string) wp_get_environment_type())) {
     echo esc_html("SKIP: the router stays inert in a production environment by design\n");
 } else {
-    fiveprayer_assert(true === LocalNetworkRouter::is_active(), 'a private Host from a local client with the option on activates the router');
+    fiveprayer_assert(true === LocalNetworkRouter::is_active(), 'a saved private Host from a local client with the option on activates the router');
     fiveprayer_assert('http://192.168.1.104:10010' === LocalNetworkRouter::get_base_url(), 'the router rewrites the URL to the request host');
     fiveprayer_assert(defined('DONOTCACHEPAGE') && true === DONOTCACHEPAGE, 'the rewritten request is kept out of every page cache');
     fiveprayer_assert(false !== has_action('send_headers', [LocalNetworkRouter::class, 'send_nocache_headers']), 'the rewritten request sends no-cache headers');
 }
 
+remove_filter('fiveprayer_local_testing_server_ips', $fiveprayer_server_ips);
 update_option(LocalNetworkRouter::OPTION_NAME, $fiveprayer_router_option);
+delete_option(LocalNetworkRouter::HOSTS_OPTION);
 $_SERVER = $fiveprayer_router_server;
 
 // ---------------------------------------------------------------------------
@@ -851,6 +1184,64 @@ fiveprayer_assert(
     'a translated string nested in a list is stored without its tags'
 );
 fiveprayer_assert(3 === $fiveprayer_sanitized['count'], 'a number in a translation file stays a number');
+
+// ---------------------------------------------------------------------------
+// PNG URL route permission
+// ---------------------------------------------------------------------------
+
+// The route can create a Media Library attachment from a GET, so it must never
+// be reachable by a subscriber.
+$fiveprayer_png = new \FivePrayer\Core\Controllers\API\EndPoints\PngUrlController();
+
+wp_set_current_user(0);
+fiveprayer_assert(false === (bool) $fiveprayer_png->check_permission(null), 'an anonymous request is denied the PNG URL route');
+
+$fiveprayer_png_admins = get_users(['role' => 'administrator', 'number' => 1, 'fields' => 'ID']);
+$fiveprayer_png_admin  = !empty($fiveprayer_png_admins) ? (int) $fiveprayer_png_admins[0] : 0;
+
+wp_set_current_user($fiveprayer_png_admin);
+fiveprayer_assert($fiveprayer_png_admin > 0 && true === (bool) $fiveprayer_png->check_permission(null), 'an administrator may use the PNG URL route');
+
+wp_set_current_user(0);
+
+// ---------------------------------------------------------------------------
+// Release tooling
+// ---------------------------------------------------------------------------
+
+// Third-party actions are pinned to a full commit SHA; a floating major tag can
+// be moved to new code without any change in this repository.
+$fiveprayer_workflows = glob($fiveprayer_plugin_root . '/.github/workflows/*.yml');
+
+if (is_array($fiveprayer_workflows) && [] !== $fiveprayer_workflows) {
+    $fiveprayer_floating = [];
+
+    foreach ($fiveprayer_workflows as $fiveprayer_workflow) {
+        $fiveprayer_workflow_source = (string) file_get_contents($fiveprayer_workflow);
+        preg_match_all('/uses:\s*([^\s#]+)@([^\s#]+)/', $fiveprayer_workflow_source, $fiveprayer_uses);
+
+        foreach ($fiveprayer_uses[2] as $fiveprayer_ref) {
+            if (!preg_match('/^[0-9a-f]{40}$/', $fiveprayer_ref)) {
+                $fiveprayer_floating[] = basename($fiveprayer_workflow) . ':' . $fiveprayer_ref;
+            }
+        }
+    }
+
+    fiveprayer_assert([] === $fiveprayer_floating, 'every workflow action is pinned to a full commit SHA');
+
+    $fiveprayer_release_source = (string) file_get_contents($fiveprayer_plugin_root . '/.github/workflows/release.yml');
+    fiveprayer_assert(false !== strpos($fiveprayer_release_source, 'allow_clobber'), 'the release workflow has an explicit clobber opt-in');
+    fiveprayer_assert(false !== strpos($fiveprayer_release_source, 'contents: write'), 'the publish job declares contents: write');
+}
+
+// The Allowed Domains limitation is documented where administrators will see it.
+$fiveprayer_api_doc_path = $fiveprayer_plugin_root . '/docs/API-Security.md';
+
+if (file_exists($fiveprayer_api_doc_path)) {
+    $fiveprayer_api_doc = (string) file_get_contents($fiveprayer_api_doc_path);
+    fiveprayer_assert(false !== strpos($fiveprayer_api_doc, 'not a security control'), 'the API security docs state that Allowed Domains is not a security control');
+}
+
+wp_set_current_user(0);
 
 echo $fiveprayer_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_failures} check(s)\n")

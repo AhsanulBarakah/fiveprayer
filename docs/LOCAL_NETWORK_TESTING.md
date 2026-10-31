@@ -10,6 +10,25 @@ in the prayer hall) leaves the switch **on**, and every screen on that network
 opens the same display at the same time. The only technical guard is that it
 does nothing on a public domain.
 
+## Which request hosts are accepted
+
+Behind a reverse proxy, `REMOTE_ADDR` is the proxy's private address for every
+request, so the client-address check alone cannot tell a TV from an internet
+visitor. The `Host` header is chosen by the visitor as well. Sharing therefore
+only activates when the request host is one of:
+
+- the addresses saved in **TV Display Mode → Share on Local Network →
+  “Addresses allowed to activate sharing”**, or
+- one of this server's own addresses (`SERVER_ADDR`, the hostname's resolved
+  address, or loopback).
+
+A request with any other `Host` header never activates the router, whatever its
+`REMOTE_ADDR` says. Save the address or hostname the TV actually uses (for
+example `192.168.1.104:10010` or `my-mosque.local`) when it is not one of the
+server's own addresses. The environment check uses
+`wp_get_environment_type()`: a site that reports `production` stays inert even
+when it happens to be reachable on a private address.
+
 > **Never type `localhost` on the phone, tablet or TV.** `localhost` always
 > means *the device you are holding*, so on a phone or TV it points at that
 > device itself and nothing loads. Always use this computer's network address

@@ -186,6 +186,8 @@ trait ApiAdminRendererTrait
                         <code><?php echo esc_url(rest_url('fiveprayer/v1/external/')); ?></code>
 
                         <h3><?php esc_html_e('Domain Restrictions & Origin Header', 'fiveprayer'); ?></h3>
+                        <p><strong><?php esc_html_e('Allowed Domains is a convenience filter for browser use, not a security control.', 'fiveprayer'); ?></strong>
+                        <?php esc_html_e('It compares the Origin or Referer header, and any non-browser client (curl, a script, a server integration) can send those headers itself. Use the IP allowlist when another server calls this API, because the client address cannot be chosen that way.', 'fiveprayer'); ?></p>
                         <p><?php esc_html_e('If you set Allowed Domains on your API key, requests must include an Origin or Referer header matching an allowed domain.', 'fiveprayer'); ?></p>
                         <p><strong><?php esc_html_e('Testing:', 'fiveprayer'); ?></strong></p>
                         <ul>
@@ -314,9 +316,6 @@ trait ApiAdminRendererTrait
                         ));
                         ?></span>
                         <div class="fiveprayer-actions-wrapper">
-                            <button class="fiveprayer-btn fiveprayer-btn-sm fiveprayer-btn-outline-success fiveprayer-copy-key" data-id="<?php echo esc_attr($key->id); ?>" title="<?php esc_html_e('Copy API Key', 'fiveprayer'); ?>">
-                                <span class="dashicons dashicons-clipboard"></span>
-                            </button>
                             <button class="fiveprayer-btn fiveprayer-btn-sm fiveprayer-btn-outline fiveprayer-view-key" data-id="<?php echo esc_attr($key->id); ?>" title="<?php esc_html_e('View Details', 'fiveprayer'); ?>">
                                 <span class="dashicons dashicons-visibility"></span>
                             </button>
@@ -343,9 +342,6 @@ trait ApiAdminRendererTrait
                 </div>
                 <div class="fiveprayer-key-masked-row">
                     <span class="fiveprayer-key-mask"><?php echo wp_kses_post($this->mask_api_key($key->id)); ?></span>
-                    <button class="fiveprayer-btn fiveprayer-btn-xs fiveprayer-btn-copy-masked" data-id="<?php echo esc_attr($key->id); ?>">
-                        <?php esc_html_e('Copy', 'fiveprayer'); ?>
-                    </button>
                 </div>
             </div>
             <?php
@@ -354,13 +350,11 @@ trait ApiAdminRendererTrait
 
     private function mask_api_key(int $key_id): string
     {
-        $full_key = $this->api_key_manager->get_full_key($key_id);
-        if ($full_key === null) {
-            return '<span class="fiveprayer-key-mask-text">' . esc_html__('Unavailable', 'fiveprayer') . '</span>';
-        }
-        $prefix = substr($full_key, 0, 6);
-        $masked = str_repeat('•', 24);
-        return '<span class="fiveprayer-key-mask-text" title="' . esc_attr__('Click Copy to copy the full key to clipboard', 'fiveprayer') . '">' . esc_html($prefix) . $masked . '</span>';
+        // No part of the key is stored any more: only a keyed hash remains.
+        return '<span class="fiveprayer-key-mask-text" title="' . esc_attr__('Keys are shown only when they are created', 'fiveprayer') . '">'
+            . esc_html(str_repeat('•', 32))
+            . '</span>'
+            . ' <span class="fiveprayer-field-caption">' . esc_html__('shown only when created', 'fiveprayer') . '</span>';
     }
 
     public function render_security_page()

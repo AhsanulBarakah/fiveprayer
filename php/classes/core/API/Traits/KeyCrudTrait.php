@@ -20,7 +20,6 @@ defined('ABSPATH') || exit;
 trait KeyCrudTrait
 {
     abstract protected function table_exists(): bool;
-    abstract protected function encrypt_key(string $plaintext): string;
     abstract protected function decrypt_key(string $stored): string;
 
     /*

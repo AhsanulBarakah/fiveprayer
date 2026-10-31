@@ -97,8 +97,28 @@ trait LogWriterTrait
         self::$logged_entries[$key] = true;
     }
 
+    /**
+     * Remove secrets and personal data from a log line.
+     *
+     * Log files are support artefacts, not a data store: an e-mail address or
+     * an API key in one is a leak with no diagnostic value. The pattern covers
+     * the plugin's `fp_` keys; bearer-style values are left to the caller.
+     */
+    private static function redact(string $message): string
+    {
+        $message = (string) preg_replace('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', '[redacted-email]', $message);
+        $message = (string) preg_replace('/\bfp_[A-Za-z0-9]{16,}\b/', '[redacted-api-key]', $message);
+        // Keep the network for diagnostics but not the host part of an IPv4
+        // address, which identifies a person on most home connections.
+        $message = (string) preg_replace('/\b(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}\b/', '$1.x', $message);
+
+        return $message;
+    }
+
     private static function write_log(string $message): void
     {
+        $message = self::redact($message);
+
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Last-resort fallback when the log file is not writable.
         error_log($message);
 

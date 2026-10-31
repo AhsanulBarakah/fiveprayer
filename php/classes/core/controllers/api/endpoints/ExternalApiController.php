@@ -209,7 +209,9 @@ class ExternalApiController extends RestControllerBase
             ],
         ]);
 
-        // Test endpoint (no authentication required)
+        // Test endpoint (no authentication required). Deliberately returns a
+        // health status only: mosque contact details used to be reachable here
+        // without a key, while every other endpoint required one.
         \register_rest_route($this->get_namespace(), '/external/test', [
             'methods' => WP_REST_Server::READABLE,
             'callback' => [$this, 'test_endpoint'],
@@ -234,31 +236,17 @@ class ExternalApiController extends RestControllerBase
 
     public function test_endpoint(WP_REST_Request $request)
     {
+        // Resolving the language still validates the request parameters; the
+        // health response itself carries no translated content.
         $resolved = $this->resolve_language_params($request);
         if (is_wp_error($resolved)) {
             return $resolved;
         }
-        [$language, $selected_languages] = $resolved;
-
-        $translations = FivePrayer_DatabaseTranslations::getTranslations();
-        $active_language = $translations['activeLanguage'][0]['language_code'] ?? 'en';
-
-        $available_languages = [];
-
-        if (isset($translations['prayer_names'])) {
-            foreach ($translations['prayer_names'] as &$translation) {
-                if (isset($translation['language_code']) && isset($translation['language_name'])) {
-                    $available_languages[$translation['language_code']] = $translation['language_name'];
-                }
-            }
-        }
 
         return rest_ensure_response([
+            'status' => 'ok',
             'version' => '1.0.0',
             'timestamp' => current_time('mysql'),
-            'requested_language' => $language ?? '',
-            'active_language' => $active_language,
-            'mosque_info' => $this->get_mosque_info_data($language),
             'endpoints' => [
                 '/external/test',
                 '/external/prayer-times',
@@ -266,7 +254,6 @@ class ExternalApiController extends RestControllerBase
                 '/external/prayer-times/month',
                 '/external/next-prayer',
             ],
-            'available_languages' => $available_languages,
         ]);
     }
 }

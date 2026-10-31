@@ -55,9 +55,8 @@ trait KeyValidationTrait
         $api_key = trim($api_key);
 
         if ('' === $api_key) {
-            // decrypt_key() returns '' for rows it cannot read (legacy hashes,
-            // rotated salts, damaged data) and hash_equals('', '') is true, so an
-            // empty credential must never reach the comparison loop.
+            // An empty credential cannot match a key_hash, but rejecting it
+            // before the query keeps the brute-force counter honest.
             Logger::warning('Empty API key rejected', 'ApiKeyManager');
             BruteForceSettings::track_failed_attempt($request_ip);
             return ['valid' => false, 'error' => 'Invalid API key'];
@@ -68,49 +67,35 @@ trait KeyValidationTrait
         // ---------------------------------------------------------------
         // 3. Look up the key
         // ---------------------------------------------------------------
-        // Key validation runs on every authenticated request and has to decrypt
-        // each stored key to compare it, so the row set is cached and dropped
-        // whenever a key is written through ApiKeyManager.
-        $stored_keys = wp_cache_get(self::AUTH_CACHE_KEY, self::CACHE_GROUP);
+        // One indexed equality query on the unique key_hash column. Nothing is
+        // decrypted and no row set is scanned, so the lookup cost does not grow
+        // with the number of keys on the site.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Authentication lookup; the unique index answers it directly.
+        $key_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, description, status, created_at, expires_at, last_used, last_used_ip, last_used_user_agent, last_used_referer, usage_count, allowed_domains, allowed_ips, allowed_endpoints, rate_limit_per_hour, created_by FROM %i WHERE key_hash = %s LIMIT 1",
+            $this->table_name,
+            $this->hash_key($api_key)
+        ));
 
-        if (!is_array($stored_keys)) {
-            $stored_keys = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-                $wpdb->prepare("SELECT id, api_key, name, description, status, created_at, expires_at, last_used, last_used_ip, last_used_user_agent, last_used_referer, usage_count, allowed_domains, allowed_ips, allowed_endpoints, rate_limit_per_hour, created_by FROM %i", $this->table_name)
-            );
-            wp_cache_set(self::AUTH_CACHE_KEY, $stored_keys, self::CACHE_GROUP, self::DATA_CACHE_TTL);
-        }
-
-        $key_data = null;
-        foreach ($stored_keys as $row) {
-            $decrypted = $this->decrypt_key($row->api_key);
-
-            // An unreadable row must never match a credential, even an empty one.
-            if ('' === $decrypted) {
-                continue;
-            }
-
-            if (hash_equals($decrypted, $api_key)) {
-                $key_data = $row;
-                break;
-            }
-        }
-
+        // Unknown, revoked and expired keys all answer with the same message:
+        // a caller must not learn whether a guessed key exists, was disabled or
+        // simply ran out. The specific reason stays in the log.
         if (!$key_data) {
             Logger::warning('Invalid API key provided: ' . $this->key_fingerprint($api_key), 'ApiKeyManager');
             BruteForceSettings::track_failed_attempt($request_ip);
             return ['valid' => false, 'error' => 'Invalid API key'];
         }
 
-        if ($key_data->status !== 'active') {
+        if ('active' !== $key_data->status) {
             Logger::warning('Inactive API key attempted: ' . $key_data->name . ' (Status: ' . $key_data->status . ')', 'ApiKeyManager');
             BruteForceSettings::track_failed_attempt($request_ip);
-            return ['valid' => false, 'error' => 'API key is ' . $key_data->status];
+            return ['valid' => false, 'error' => 'Invalid API key'];
         }
 
         if ($key_data->expires_at && strtotime($key_data->expires_at) < time()) {
             Logger::warning('Expired API key attempted: ' . $key_data->name, 'ApiKeyManager');
             BruteForceSettings::track_failed_attempt($request_ip);
-            return ['valid' => false, 'error' => 'API key has expired'];
+            return ['valid' => false, 'error' => 'Invalid API key'];
         }
 
         // ---------------------------------------------------------------
@@ -139,18 +124,18 @@ trait KeyValidationTrait
         // ---------------------------------------------------------------
         // 6. Update usage statistics
         // ---------------------------------------------------------------
-        $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+        // Increment in SQL instead of writing back a value read moments ago, so
+        // two concurrent requests cannot both store the same count.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $wpdb->query($wpdb->prepare(
+            "UPDATE %i SET last_used = %s, last_used_ip = %s, last_used_user_agent = %s, last_used_referer = %s, usage_count = usage_count + 1 WHERE id = %d",
             $this->table_name,
-            [
-                'last_used' => current_time('mysql'),
-                'last_used_ip' => $request_ip,
-                'last_used_user_agent' => fiveprayer_get_server_value('HTTP_USER_AGENT'),
-                'last_used_referer' => fiveprayer_get_server_value('HTTP_REFERER'),
-                'usage_count' => $key_data->usage_count + 1,
-            ],
-            ['id' => $key_data->id],
-            ['%s', '%s', '%s', '%s', '%d']
-        );
+            current_time('mysql'),
+            $request_ip,
+            fiveprayer_get_server_value('HTTP_USER_AGENT'),
+            fiveprayer_get_server_value('HTTP_REFERER'),
+            $key_data->id
+        ));
 
         // The usage counters are display only: drop the cached copies so the
         // admin list picks the new numbers up, without re-querying on every hit.
@@ -158,15 +143,29 @@ trait KeyValidationTrait
         wp_cache_delete(self::LIST_CACHE_KEY, self::CACHE_GROUP);
         wp_cache_delete('fiveprayer_api_key_row_' . $key_data->id, self::CACHE_GROUP);
 
-        // Increment hourly rate counter
+        // Increment hourly rate counter. With a persistent object cache
+        // wp_cache_incr() is atomic; otherwise the transient is the best
+        // available store and the read-then-write race window is unchanged.
         if (!empty($key_data->rate_limit_per_hour) && $key_data->rate_limit_per_hour > 0) {
             $current_hour = current_time('YmdH');
             $rate_key = 'fp_rate_' . $key_data->id . '_' . $current_hour;
-            $hourly_count = get_transient($rate_key);
-            if ($hourly_count === false) {
-                set_transient($rate_key, 1, HOUR_IN_SECONDS);
+
+            if (wp_using_ext_object_cache()) {
+                $cache_key = 'fiveprayer_rate_' . md5($rate_key);
+                if (false === wp_cache_get($cache_key, self::CACHE_GROUP)) {
+                    wp_cache_set($cache_key, 1, self::CACHE_GROUP, HOUR_IN_SECONDS);
+                    set_transient($rate_key, 1, HOUR_IN_SECONDS);
+                } else {
+                    $new_count = wp_cache_incr($cache_key, 1, self::CACHE_GROUP);
+                    set_transient($rate_key, absint($new_count), HOUR_IN_SECONDS);
+                }
             } else {
-                set_transient($rate_key, $hourly_count + 1, HOUR_IN_SECONDS);
+                $hourly_count = get_transient($rate_key);
+                if ($hourly_count === false) {
+                    set_transient($rate_key, 1, HOUR_IN_SECONDS);
+                } else {
+                    set_transient($rate_key, absint($hourly_count) + 1, HOUR_IN_SECONDS);
+                }
             }
         }
 

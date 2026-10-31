@@ -47,9 +47,36 @@ if ($fiveprayer_default_image_id > 0 && 'attachment' === get_post_type($fivepray
     wp_delete_attachment($fiveprayer_default_image_id, true);
 }
 
-// 3. Options and transients. One prefix covers every setting, migration flag,
-//    dismissed notice and hourly rate-limit counter the plugin writes, so a
-//    setting added later is cleaned up without touching this file.
+// 3. Options and transients. The `fiveprayer_` prefix covers every setting,
+//    migration flag, dismissed notice and hourly rate-limit counter the plugin
+//    writes, so a setting added later is cleaned up without touching this file.
+//    The `fp_` names below predate that convention and are listed explicitly.
+$fiveprayer_option_names = [
+    // Brute-force protection settings and escalation state.
+    'fp_brute_force_settings',
+    'fp_brute_cooldown_level',
+    'fp_brute_stopped_at',
+    // Mosque contact details read by the external API.
+    'fp_mosque_address',
+    'fp_mosque_phone',
+    'fp_mosque_website',
+];
+
+foreach ($fiveprayer_option_names as $fiveprayer_option_name) {
+    delete_option($fiveprayer_option_name);
+}
+
+// Transients need delete_transient(): delete_option() on the bare name would
+// leave both the `_transient_` value and its timeout row behind.
+$fiveprayer_transient_names = [
+    'fp_notice_dismissed_until',
+    'fp_brute_email_cooldown',
+];
+
+foreach ($fiveprayer_transient_names as $fiveprayer_transient_name) {
+    delete_transient($fiveprayer_transient_name);
+}
+
 $fiveprayer_option_patterns = [
     $wpdb->esc_like('fiveprayer_') . '%',
     // Leftovers of the telemetry SDK that used to be bundled, for a site that
@@ -57,6 +84,10 @@ $fiveprayer_option_patterns = [
     $wpdb->esc_like('ifiiri_fiveprayer_') . '%',
     $wpdb->esc_like('_transient_fiveprayer_') . '%',
     $wpdb->esc_like('_transient_timeout_fiveprayer_') . '%',
+    // Per-IP failed-attempt counters (one transient plus its timeout row).
+    $wpdb->esc_like('_transient_fp_brute_') . '%',
+    $wpdb->esc_like('_transient_timeout_fp_brute_') . '%',
+    // Per-key hourly rate-limit counters.
     $wpdb->esc_like('_transient_fp_rate_') . '%',
     $wpdb->esc_like('_transient_timeout_fp_rate_') . '%',
 ];

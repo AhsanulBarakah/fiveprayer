@@ -5,6 +5,7 @@ namespace FivePrayer\Core\Controllers\API\EndPoints\Traits;
 defined('ABSPATH') || exit;
 
 use FivePrayer\Core\Helpers\PrayerDataCache;
+use FivePrayer\Core\Logging\Logger;
 use FivePrayer\Core\ShortCodes\Managers\TranslationManager;
 
 /**
@@ -237,7 +238,8 @@ trait TranslationHelperTrait
                 $translations['date'][$lang]       = '';
                 $translations['day_label'][$lang]  = '';
             }
-            $translations['error'] = $e->getMessage();
+            Logger::error('Date translation failed: ' . $e->getMessage(), 'TranslationHelper');
+            $translations['error'] = 'Translation lookup failed';
         }
 
         return $translations;

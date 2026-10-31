@@ -60,7 +60,7 @@ trait LogActionHandlerTrait
 
         $this->purge_external_caches();
 
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Logging settings saved successfully.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'logging_saved', 'translations');
     }
 
     public function handle_clear_logs(): void
@@ -74,7 +74,7 @@ trait LogActionHandlerTrait
         Logger::clear_log_file();
         Logger::info('Custom log file cleared via admin interface', 'LoggingAdmin');
 
-        $this->redirect_with_notice('fiveprayer-settings', 'updated', __('Custom FivePrayer log file has been cleared.', 'fiveprayer'), 'translations');
+        $this->redirect_with_notice('fiveprayer-settings', 'updated', 'log_cleared', 'translations');
     }
 
     public function handle_download_log_file(): void
@@ -88,7 +88,7 @@ trait LogActionHandlerTrait
         $log_file_path = Logger::get_log_file_path();
         
         if (!file_exists($log_file_path)) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('Log file does not exist.', 'fiveprayer'), 'translations');
+            $this->redirect_with_notice('fiveprayer-settings', 'error', 'log_missing', 'translations');
             return;
         }
 
@@ -101,12 +101,13 @@ trait LogActionHandlerTrait
         exit;
     }
 
-    private function redirect_with_notice(string $page, string $type, string $message, string $tab = ''): void
+    private function redirect_with_notice(string $page, string $type, string $message_code, string $tab = ''): void
     {
         $args = [
             'page'   => $page,
             $type    => '1',
-            'fp_msg' => rawurlencode($message),
+            // SettingsAdmin renders only known codes, never free text.
+            'fp_msg' => sanitize_key($message_code),
         ];
         if ($tab) { $args['tab'] = $tab; }
         $url = add_query_arg($args, admin_url('admin.php'));

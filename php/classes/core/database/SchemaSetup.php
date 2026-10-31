@@ -18,6 +18,58 @@ class SchemaSetup
     }
 
     /**
+     * Bring the API key table up to the keyed-hash storage shape.
+     *
+     * Idempotent and safe to call on every request: each step is guarded by a
+     * schema probe or an option flag. Returns false while the table does not
+     * exist yet, so a fresh install keeps the migration flag unset until
+     * createTables() has made the table.
+     *
+     * @return bool
+     */
+    public function ensureApiKeyHashStorage(): bool
+    {
+        global $wpdb;
+
+        $api_table_name = $wpdb->prefix . 'fp_api_keys';
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time schema check guarded by an option flag.
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $api_table_name)) !== $api_table_name) {
+            return false;
+        }
+
+        if (!get_option('fiveprayer_api_key_column_nullable')) {
+            $this->schema_helper->maybeModifyColumn($api_table_name, 'api_key', "ALTER TABLE $api_table_name MODIFY api_key varchar(255) DEFAULT NULL");
+            update_option('fiveprayer_api_key_column_nullable', 1);
+        }
+
+        $this->schema_helper->maybeAddColumn($api_table_name, 'key_hash', "ALTER TABLE $api_table_name ADD key_hash char(64) DEFAULT NULL");
+        // ApiKeyManager caches its own column probe; drop it so the column just
+        // added is visible to this request's migration.
+        wp_cache_delete('fiveprayer_api_keys_columns', 'fiveprayer');
+
+        $this->schema_helper->maybeAddIndex(
+            $api_table_name,
+            'key_hash',
+            "ALTER TABLE $api_table_name ADD UNIQUE KEY key_hash (key_hash)"
+        );
+
+        // One-time migration from reversible storage: decrypt each legacy row
+        // once, store its hash and clear the ciphertext. The flag is only set
+        // when the migration actually ran (not while the salts are missing).
+        if ('1' !== (string) get_option('fiveprayer_api_keys_hash_migrated')) {
+            $api_key_manager = new \FivePrayer\Core\API\ApiKeyManager();
+            $hashed_keys     = $api_key_manager->migrate_existing_keys_to_hashes();
+
+            if (false !== $hashed_keys) {
+                update_option('fiveprayer_api_keys_hash_migrated', '1');
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Create necessary database tables only when plugin is activated.
      */
     public function createTables(): void
@@ -34,9 +86,14 @@ class SchemaSetup
         // These run on every page load and must be idempotent (no-ops if done)
         // ====================================================================
 
-        // Ensure api_key column is wide enough for AES-256-CBC encrypted values
+        // API keys are stored as a keyed hash in key_hash. The old api_key
+        // column is cleared and made nullable once, so the unique index on it
+        // still accepts many cleared rows.
         $api_table_name = $wpdb->prefix . 'fp_api_keys';
-        $this->schema_helper->maybeModifyColumn($api_table_name, 'api_key', "ALTER TABLE $api_table_name MODIFY api_key varchar(255) NOT NULL");
+
+        // Also runs from the one-time init migration, so an existing install
+        // gets the key_hash column without needing a reactivation.
+        $this->ensureApiKeyHashStorage();
 
         // Add missing columns to existing tables (migration) - now in always-run
         $this->schema_helper->maybeAddColumn($api_table_name, 'last_used_ip', "ALTER TABLE $api_table_name ADD last_used_ip varchar(45) DEFAULT NULL");
@@ -130,7 +187,8 @@ class SchemaSetup
         Logger::info('Creating API keys table', 'SchemaSetup');
         dbDelta("CREATE TABLE IF NOT EXISTS $api_table_name (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            api_key varchar(255) NOT NULL,
+            api_key varchar(255) DEFAULT NULL,
+            key_hash char(64) DEFAULT NULL,
             name varchar(255) NOT NULL,
             description text DEFAULT NULL,
             status enum('active', 'inactive', 'revoked') DEFAULT 'active',
@@ -149,6 +207,7 @@ class SchemaSetup
             created_by bigint(20) unsigned NOT NULL,
             PRIMARY KEY (id),
             UNIQUE KEY api_key (api_key),
+            UNIQUE KEY key_hash (key_hash),
             KEY status (status),
             KEY created_by (created_by)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8");

@@ -13,9 +13,11 @@ on:
         description: 'Tag to publish (must already exist, e.g. v3.0.0)'
         required: true
         type: string
-
-permissions:
-  contents: write
+      allow_clobber:
+        description: 'Replace the asset on a release that is already published (dangerous)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
@@ -25,21 +27,25 @@ jobs:
   release:
     name: Build, package and publish
     runs-on: ubuntu-latest
+    # The only job in the repository that needs write access; everything else
+    # runs with contents: read.
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 12.15.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.3'
           coverage: none
@@ -98,6 +104,8 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Empty for a tag push, so only a manual run can opt in.
+          ALLOW_CLOBBER: ${{ github.event.inputs.allow_clobber }}
         run: |
           set -euo pipefail
           NOTES_ARGS=()
@@ -108,8 +116,15 @@ jobs:
           fi
 
           if gh release view "$TAG" > /dev/null 2>&1; then
-            # Re-running for an existing release replaces the asset instead of
-            # failing, so a fixed build can be re-published.
+            # A published release is immutable unless a manual workflow_dispatch
+            # run explicitly opted in. Silently replacing a shipped asset makes
+            # the download and its checksum disagree.
+            IS_DRAFT="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
+            if [ "$IS_DRAFT" != "true" ] && [ "${ALLOW_CLOBBER:-false}" != "true" ]; then
+              echo "Release $TAG is already published. Re-run with workflow_dispatch and allow_clobber=true to replace its asset." >&2
+              exit 1
+            fi
+
             gh release upload "$TAG" "$ASSET" --clobber
             gh release edit "$TAG" "${NOTES_ARGS[@]}"
           else

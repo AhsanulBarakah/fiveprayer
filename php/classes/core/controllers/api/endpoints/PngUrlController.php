@@ -47,24 +47,21 @@ class PngUrlController
 
     public function check_permission($request)
     {
-        // For public access, require read capability
-        $nonce = sanitize_text_field(filter_input(INPUT_GET, 'nonce') ?: '');
-        if (!$nonce) {
-            if (!current_user_can('read')) {
-                return false;
-            }
-            return true;
-        }
-
-        // For requests with nonce, require manage_options capability
+        // This route can create a Media Library attachment as a side effect of
+        // a GET, so it is administrator-only. The previous `read` capability
+        // let every logged-in subscriber trigger the upload path.
         if (!current_user_can('manage_options')) {
             return false;
         }
 
-        if (!wp_verify_nonce($nonce, 'fiveprayer_png')) {
+        $nonce = sanitize_text_field((string) filter_input(INPUT_GET, 'nonce'));
+
+        // The editor sends a nonce; an administrator session without one is
+        // still accepted because the capability check above already gates it.
+        if ('' !== $nonce && !wp_verify_nonce($nonce, 'fiveprayer_png')) {
             return false;
         }
-        
+
         return true;
     }
 

@@ -69,6 +69,15 @@ class LocalNetworkRouter
     public const OPTION_NAME = 'fiveprayer_local_testing_mode';
 
     /**
+     * Hosts the administrator saved on the TV Display Mode settings page.
+     *
+     * Stored as a comma- or newline-separated list of host[:port] values. The
+     * request Host header is only trusted when it is one of these, or one of
+     * the server's own addresses (see {@see self::get_server_addresses()}).
+     */
+    public const HOSTS_OPTION = 'fiveprayer_local_testing_hosts';
+
+    /**
      * Address ranges a local network device is allowed to connect from.
      *
      * Loopback plus the private IPv4 ranges and the IPv6 unique-local and
@@ -172,12 +181,21 @@ class LocalNetworkRouter
             return;
         }
 
-        // Third guard: the administrator must have opted in.
+        // Third guard: the Host header must be a host the administrator saved,
+        // or an address that belongs to this server. Behind a reverse proxy
+        // REMOTE_ADDR is private for every request, so the client check alone
+        // proves nothing there; this is what stops a spoofed Host header from
+        // activating the router for an internet visitor.
+        if (!self::is_allowed_host($host)) {
+            return;
+        }
+
+        // Fourth guard: the administrator must have opted in.
         if (!self::is_enabled()) {
             return;
         }
 
-        // Fourth guard: the site must look like a local environment. A public
+        // Fifth guard: the site must look like a local environment. A public
         // host never reaches this point, so this is an extra safety net rather
         // than the primary gate.
         if (!self::is_local_environment()) {
@@ -416,23 +434,119 @@ class LocalNetworkRouter
     }
 
     /**
+     * Hosts the administrator saved for Share on Local Network.
+     *
+     * @return string[] Normalised host[:port] entries, lower-case.
+     */
+    public static function get_saved_hosts(): array
+    {
+        $raw = get_option(self::HOSTS_OPTION, '');
+
+        if (!is_string($raw) || '' === trim($raw)) {
+            return [];
+        }
+
+        $hosts = preg_split('/[\r\n,]+/', $raw);
+        if (!is_array($hosts)) {
+            return [];
+        }
+
+        $clean = [];
+        foreach ($hosts as $host) {
+            $host = strtolower(trim((string) $host));
+            if ('' !== $host && preg_match('/^[a-z0-9\[\]\-\.:_]+$/', $host)) {
+                $clean[] = $host;
+            }
+        }
+
+        return array_values(array_unique($clean));
+    }
+
+    /**
+     * Addresses that belong to this server.
+     *
+     * `SERVER_ADDR`, the hostname's resolved address and loopback. A request
+     * that arrived on one of these is genuinely addressed to this machine even
+     * if an administrator never typed the address into the settings page.
+     *
+     * @return string[] Lower-case addresses.
+     */
+    public static function get_server_addresses(): array
+    {
+        $addresses = ['127.0.0.1', '::1'];
+
+        $server_addr = fiveprayer_get_server_value('SERVER_ADDR');
+        if ('' !== $server_addr && false !== filter_var($server_addr, FILTER_VALIDATE_IP)) {
+            $addresses[] = $server_addr;
+        }
+
+        $hostname = function_exists('gethostname') ? gethostname() : false;
+        if (is_string($hostname) && '' !== $hostname) {
+            $resolved = gethostbyname($hostname);
+            if (false !== filter_var($resolved, FILTER_VALIDATE_IP)) {
+                $addresses[] = $resolved;
+            }
+        }
+
+        /**
+         * Filter the addresses treated as belonging to this server.
+         *
+         * @since 3.0.0
+         *
+         * @param string[] $addresses IPv4/IPv6 addresses.
+         */
+        $addresses = (array) apply_filters('fiveprayer_local_testing_server_ips', $addresses);
+
+        $clean = [];
+        foreach ($addresses as $address) {
+            $address = strtolower(trim((string) $address));
+            if ('' !== $address) {
+                $clean[] = $address;
+            }
+        }
+
+        return array_values(array_unique($clean));
+    }
+
+    /**
+     * Whether a request host is one this server may serve the display on.
+     *
+     * @param string $host Host from the request, optionally with a port.
+     * @return bool
+     */
+    public static function is_allowed_host(string $host): bool
+    {
+        $host = strtolower(trim($host));
+        $hostname = $host;
+
+        if (preg_match('/^(\[[^\]]+\]|[^:]+):\d+$/', $host, $matches)) {
+            $hostname = $matches[1];
+        }
+
+        $hostname = trim($hostname, '[]');
+
+        if (in_array($host, self::get_saved_hosts(), true) || in_array($hostname, self::get_server_addresses(), true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Whether the site looks like a local development environment.
      *
      * The caller has already proven the request arrived on a loopback/private
-     * address, so this is a secondary safety net:
-     *
-     * - A site that explicitly declares `WP_ENVIRONMENT_TYPE = 'production'`
-     *   is never rewritten, even when it happens to be reachable on a private
-     *   address.
-     * - Everything else is accepted, so installs running with WP_DEBUG off on
-     *   a local host still work.
+     * address, so this is a secondary safety net. Uses WordPress's own
+     * environment API (`wp_get_environment_type()`) instead of reading the
+     * WP_ENVIRONMENT_TYPE constant directly, so a value set through the
+     * `wp_get_environment_type` filter is honoured as well.
      *
      * @return bool
      */
     private static function is_local_environment(): bool
     {
-        if (defined('WP_ENVIRONMENT_TYPE') && 'production' === strtolower((string) WP_ENVIRONMENT_TYPE)) {
-            return false;
+        if (function_exists('wp_get_environment_type')) {
+            return 'production' !== strtolower((string) wp_get_environment_type());
         }
 
         return true;

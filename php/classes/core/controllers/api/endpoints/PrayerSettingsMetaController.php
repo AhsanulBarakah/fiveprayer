@@ -32,6 +32,36 @@ class PrayerSettingsMetaController extends RestControllerBase
      */
     private const TABLE_COLUMN_VARIANT_CACHE_KEY = 'fiveprayer_meta_table_column_variant';
 
+    /**
+     * Settings a caller without manage_options may read.
+     *
+     * The GET route is public because page builders and block previews need
+     * the display values. Everything an editor screen needs (printer layout,
+     * import/export state, custom schedules) stays behind the capability; an
+     * anonymous visitor only gets what the rendered display itself shows.
+     *
+     * @var string[]
+     */
+    public const PUBLIC_META_KEYS = [
+        'prayer_names', 'timetable_prayer', 'vertical_daily_prayer', 'day_names',
+        'gregorian_months', 'gregorian_numbers', 'hijra_months', 'hijra_numbers',
+        'location', 'hijralocale', 'activeLanguage', 'extra_info',
+        'midnight_calculation_mode', 'Only_affects_Asr_calculation',
+        'Higher_Latitudes_Methods', 'Methods_For_Calculation', 'Rounding_Method',
+        'rounding_selected', 'rounding_enabled', 'smoothing_selected',
+        'calendar_type', 'calendar_display', 'feature_toggles', 'feature_off_display',
+        'mfc_selected', 'hlm_selected', 'month', 'ramadan', 'oaac_selected',
+        'mncm_selected', 'IQFajr', 'IQDhuhr', 'IQAsr', 'IQMaghrib', 'IQIsha',
+        'Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha', 'Imsak', 'Sunrise', 'Sunset',
+        'Midnight', 'horizontal_line', 'borderstyle', 'bordersize', 'borderradius',
+        'borderclr', 'firstbg', 'firstclr', 'secondbg', 'secondclr', 'evenbg',
+        'evenclr', 'oddbg', 'oddclr', 'highlightbg', 'highlightclr', 'hoverbg',
+        'hoverclr', 'hover_mode', 'hover_enabled', 'skip_iqamah_midnight',
+        'hide_printer_button', 'hide_month_selection', 'timetable_layout',
+        'next_prayer_countdown', 'vertical_today_layout', 'day_display',
+        'extra_prayers',
+    ];
+
     private $table_name;
 
     public function __construct()
@@ -261,9 +291,7 @@ class PrayerSettingsMetaController extends RestControllerBase
         }
 
         return $value;
-    }
-
-    public function get_meta()
+    }        public function get_meta()
     {
         try {
             SecurityHelper::log_security_event('Fetching prayer settings', 'info');
@@ -312,6 +340,15 @@ class PrayerSettingsMetaController extends RestControllerBase
             });
 
             $transformed_data = array_values($filtered_data);
+
+            // The route itself stays public so page builders and block previews
+            // keep working, but a caller who cannot manage the site gets only
+            // the display-only subset. The editor set is capability-gated.
+            if (!current_user_can('manage_options')) {
+                $transformed_data = array_values(array_filter($transformed_data, static function ($row) {
+                    return isset($row['meta_key']) && in_array($row['meta_key'], self::PUBLIC_META_KEYS, true);
+                }));
+            }
 
             SecurityHelper::log_security_event('Settings retrieved successfully', 'info');
             return rest_ensure_response($transformed_data);
@@ -377,9 +414,10 @@ class PrayerSettingsMetaController extends RestControllerBase
                 'nextPrayer' => $next_prayer_slug
             ]);
         } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => 'Error getting prayer time: ' . $e->getMessage()
-            ]);
+            // The exception text can name files, tables or internal state; the
+            // client only needs to know the request failed.
+            SecurityHelper::log_security_event('Error getting next prayer: ' . $e->getMessage(), 'error');
+            wp_send_json_error(['message' => 'Error getting prayer time']);
         }
     }
 }

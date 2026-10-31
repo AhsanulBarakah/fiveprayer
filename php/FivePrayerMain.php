@@ -182,6 +182,26 @@ function fiveprayer_maybe_add_asr_second_begins_column() {
 add_action('init', 'fiveprayer_maybe_add_asr_second_begins_column', 20);
 
 /**
+ * One-time migration: move API keys to keyed-hash storage.
+ *
+ * Activation already does this, but a site that only replaces the plugin files
+ * would keep the reversible api_key column. This adds the key_hash column,
+ * hashes the rows it can decrypt and clears their ciphertext exactly once.
+ */
+function fiveprayer_maybe_migrate_api_key_storage(): void {
+    if ('1' === (string) get_option('fiveprayer_api_keys_hash_migrated')) {
+        return;
+    }
+
+    if (!class_exists('\\FivePrayer\\Core\\Database\\SchemaSetup')) {
+        return;
+    }
+
+    (new \FivePrayer\Core\Database\SchemaSetup())->ensureApiKeyHashStorage();
+}
+add_action('init', 'fiveprayer_maybe_migrate_api_key_storage', 20);
+
+/**
  * One-time cleanup of the removed telemetry SDK's state.
  *
  * The bundled iFiiri client SDK stored a handful of options and a daily
@@ -386,54 +406,72 @@ function fiveprayer_reset_calculation_settings_on_upgrade() {
 add_action('plugins_loaded', 'fiveprayer_reset_calculation_settings_on_upgrade', 20);
 
 /**
+ * Whether the calculation-reset notice should appear for this request.
+ */
+function fiveprayer_should_show_reset_notice(): bool {
+    $page = sanitize_key(SecurityHelper::get_sanitized_get_input('page'));
+
+    // Only show on fiveprayer pages
+    if (!in_array($page, ['fiveprayer', 'fiveprayer-settings', 'fiveprayer-api-settings'], true)) {
+        return false;
+    }
+
+    if (!current_user_can('manage_options')) {
+        return false;
+    }
+
+    $current_version = fiveprayer_get_plugin_version();
+    $already_reset   = get_option('fiveprayer_calc_settings_reset', []);
+
+    if (!is_array($already_reset) || !in_array($current_version, $already_reset, true)) {
+        return false;
+    }
+
+    return !get_option('fiveprayer_reset_notice_dismissed_' . $current_version, false);
+}
+
+/**
  * Show admin notice if calculation settings were reset during upgrade.
  */
 function fiveprayer_show_reset_notice() {
-    $page = sanitize_key(SecurityHelper::get_sanitized_get_input('page'));
-    
-    // Only show on fiveprayer pages
-    if (!in_array($page, ['fiveprayer', 'fiveprayer-settings', 'fiveprayer-api-settings'])) {
+    if (!fiveprayer_should_show_reset_notice()) {
         return;
     }
-    
-    $current_version = fiveprayer_get_plugin_version();
-    $reset_flag_option = 'fiveprayer_calc_settings_reset';
-    $already_reset = get_option($reset_flag_option, []);
 
-    if (in_array($current_version, $already_reset)) {
-        $notice_dismissed = get_option('fiveprayer_reset_notice_dismissed_' . $current_version, false);
-        
-        if (!$notice_dismissed && current_user_can('manage_options')) {
-            ?>
-            <div class="notice notice-warning is-dismissible" id="fiveprayer-reset-notice">
-                <p>
-                    <strong>Five Prayer Plugin:</strong> Calculation settings have been reset for version <?php echo esc_html($current_version); ?>. 
-                    Please go to <a href="<?php echo esc_url(admin_url('admin.php?page=fiveprayer#/customizing/settings')); ?>">Customizing > Configure Settings</a> to reconfigure your prayer calculation methods.
-                </p>
-            </div>
-            <script>
-                jQuery(document).ready(function($) {
-                    $('#fiveprayer-reset-notice').on('click', '.notice-dismiss', function() {
-                        $.ajax({
-                            // The handler reads $_POST['version']; jQuery sends
-                            // GET unless told otherwise, so this always came back
-                            // "Missing version" and the notice never went away.
-                            type: 'POST',
-                            url: ajaxurl,
-                            data: {
-                                action: 'fiveprayer_dismiss_reset_notice',
-                                nonce: '<?php echo esc_js(wp_create_nonce('fiveprayer_dismiss_reset_notice')); ?>',
-                                version: '<?php echo esc_js($current_version); ?>'
-                            }
-                        });
-                    });
-                });
-            </script>
-            <?php
-        }
-    }
+    $current_version = fiveprayer_get_plugin_version();
+    ?>
+    <div class="notice notice-warning is-dismissible" id="fiveprayer-reset-notice">
+        <p>
+            <strong>Five Prayer Plugin:</strong> Calculation settings have been reset for version <?php echo esc_html($current_version); ?>.
+            Please go to <a href="<?php echo esc_url(admin_url('admin.php?page=fiveprayer#/customizing/settings')); ?>">Customizing > Configure Settings</a> to reconfigure your prayer calculation methods.
+        </p>
+    </div>
+    <?php
 }
 add_action('admin_notices', 'fiveprayer_show_reset_notice');
+
+/**
+ * Attach the notice's dismissal handler as an enqueued inline script.
+ *
+ * The handler used to be printed as an inline <script> inside admin_notices,
+ * which put executable code in the middle of the page body. Registering an
+ * empty handle and adding the code to it keeps WordPress's script pipeline in
+ * charge of printing and ordering it.
+ */
+function fiveprayer_enqueue_reset_notice_script(): void {
+    if (!fiveprayer_should_show_reset_notice()) {
+        return;
+    }
+
+    wp_register_script('fiveprayer-reset-notice', false, ['jquery'], fiveprayer_get_plugin_version(), true);
+    wp_enqueue_script('fiveprayer-reset-notice');
+
+    wp_add_inline_script(
+        'fiveprayer-reset-notice',
+        'jQuery(function($){$("#fiveprayer-reset-notice").on("click",".notice-dismiss",function(){$.ajax({type:"POST",url:ajaxurl,data:{action:"fiveprayer_dismiss_reset_notice",nonce:' . wp_json_encode(wp_create_nonce('fiveprayer_dismiss_reset_notice')) . ',version:' . wp_json_encode(fiveprayer_get_plugin_version()) . '}});});});'
+    );
+}
+add_action('admin_enqueue_scripts', 'fiveprayer_enqueue_reset_notice_script');
 
 /**
  * AJAX handler for dismissing the reset notice.

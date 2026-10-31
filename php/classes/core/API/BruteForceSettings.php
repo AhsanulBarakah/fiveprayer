@@ -16,6 +16,24 @@ class BruteForceSettings
     public const COOLDOWN_LEVEL_OPTION = 'fp_brute_cooldown_level';
 
     /**
+     * Timestamp written when escalation reaches the "stopped" level.
+     */
+    public const STOPPED_OPTION = 'fp_brute_stopped_at';
+
+    /**
+     * How long "stopped" silences alerts before it resets itself.
+     */
+    private const STOPPED_RESET_SECONDS = DAY_IN_SECONDS;
+
+    /**
+     * Hard ceiling on per-address transient rows.
+     *
+     * An attacker cycling addresses could otherwise create one option row per
+     * request and grow wp_options without bound.
+     */
+    private const MAX_TRACKED_IPS = 500;
+
+    /**
      * Escalating cooldown durations in minutes.
      * Level 0 → 10 min, Level 1 → 30 min, Level 2 → 60 min + stopped.
      */
@@ -164,11 +182,35 @@ class BruteForceSettings
     }
 
     /**
+     * Reduce an address to the unit that is tracked.
+     *
+     * An attacker owns a whole IPv6 /64, so counting a single address lets
+     * them rotate through the block with a new source address per request. The
+     * lower 64 bits are zeroed and the /64 network is tracked instead.
+     *
+     * @param string $ip IPv4 or IPv6 address.
+     * @return string Tracked address.
+     */
+    public static function get_tracked_address(string $ip): string
+    {
+        $packed = @inet_pton($ip); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Malformed input is expected and handled by the false return.
+
+        if (false === $packed || strlen($packed) !== 16) {
+            return $ip;
+        }
+
+        $network = substr($packed, 0, 8) . str_repeat("\0", 8);
+        $printable = inet_ntop($network);
+
+        return false === $printable ? $ip : $printable;
+    }
+
+    /**
      * Build the transient key for an IP address.
      */
     public static function get_transient_key(string $ip): string
     {
-        return self::TRANSIENT_PREFIX . $ip;
+        return self::TRANSIENT_PREFIX . self::get_tracked_address($ip);
     }
 
     /**
@@ -181,20 +223,116 @@ class BruteForceSettings
         }
 
         $transient_key = self::get_transient_key($ip);
-        $attempts = get_transient($transient_key);
+        $new_attempts  = self::increment_attempt_counter($transient_key, self::get_lockout_seconds());
 
-        if ($attempts === false) {
-            set_transient($transient_key, 1, self::get_lockout_seconds());
-            $new_attempts = 1;
-        } else {
-            $new_attempts = absint($attempts) + 1;
-            set_transient($transient_key, $new_attempts, self::get_lockout_seconds());
+        // A brand new counter row is the only moment the table can grow.
+        if (1 === $new_attempts) {
+            self::prune_tracked_addresses();
         }
 
         // Send notification exactly when the IP crosses the block threshold
         if ($new_attempts === self::get_max_attempts()) {
             self::send_block_notification($ip);
         }
+    }
+
+    /**
+     * Increment the failed-attempt counter for one transient key.
+     *
+     * With a persistent object cache `wp_cache_incr()` updates the value
+     * atomically, so two simultaneous failures cannot both read N and write
+     * N+1. The transient is still written so the admin list and the block check
+     * see the current value; without a persistent cache the previous
+     * read-then-write behaviour is the only option.
+     *
+     * @param string $transient_key Transient name.
+     * @param int    $ttl           Lifetime in seconds.
+     * @return int New attempt count.
+     */
+    private static function increment_attempt_counter(string $transient_key, int $ttl): int
+    {
+        if (wp_using_ext_object_cache()) {
+            $cache_key = 'fiveprayer_brute_' . md5($transient_key);
+
+            if (false === wp_cache_get($cache_key, 'fiveprayer')) {
+                wp_cache_set($cache_key, 1, 'fiveprayer', $ttl);
+                set_transient($transient_key, 1, $ttl);
+                return 1;
+            }
+
+            $new_count = wp_cache_incr($cache_key, 1, 'fiveprayer');
+            $new_count = $new_count > 0 ? (int) $new_count : 1;
+            set_transient($transient_key, $new_count, $ttl);
+
+            return $new_count;
+        }
+
+        $attempts     = get_transient($transient_key);
+        $new_attempts = false === $attempts ? 1 : absint($attempts) + 1;
+        set_transient($transient_key, $new_attempts, $ttl);
+
+        return $new_attempts;
+    }
+
+    /**
+     * Delete the oldest tracked addresses when the cap is exceeded.
+     */
+    private static function prune_tracked_addresses(): void
+    {
+        global $wpdb;
+
+        $prefix = '_transient_' . self::TRANSIENT_PREFIX;
+        $like   = $wpdb->esc_like($prefix) . '%';
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded cleanup on the failure path.
+        $count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name <> %s",
+            $like,
+            '_transient_fp_brute_email_cooldown'
+        ));
+
+        if ($count <= self::MAX_TRACKED_IPS) {
+            return;
+        }
+
+        $excess = $count - self::MAX_TRACKED_IPS;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $names = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name <> %s ORDER BY option_id ASC LIMIT %d",
+            $like,
+            '_transient_fp_brute_email_cooldown',
+            $excess
+        ));
+
+        foreach ($names as $name) {
+            delete_transient(substr((string) $name, strlen('_transient_')));
+        }
+    }
+
+    /**
+     * Reset the "stopped" escalation after its window elapses.
+     *
+     * Without this, one burst of blocked addresses silenced alerts forever and
+     * the only way back was the manual Reset button.
+     */
+    public static function maybe_reset_stopped_level(): void
+    {
+        if ('stopped' !== get_option(self::COOLDOWN_LEVEL_OPTION)) {
+            return;
+        }
+
+        $since = (int) get_option(self::STOPPED_OPTION, 0);
+
+        if ($since > 0 && (time() - $since) < self::STOPPED_RESET_SECONDS) {
+            return;
+        }
+
+        delete_option(self::COOLDOWN_LEVEL_OPTION);
+        delete_option(self::STOPPED_OPTION);
+        delete_transient('fp_brute_email_cooldown');
+
+        Logger::info('Brute-force alert escalation reset after the stopped window elapsed.', 'BruteForceSettings');
     }
 
     /**
@@ -233,6 +371,9 @@ class BruteForceSettings
 
         // Respect notification cooldown to prevent email floods
         $cooldown_key = 'fp_brute_email_cooldown';
+
+        // A stopped escalation expires on its own after the configured window.
+        self::maybe_reset_stopped_level();
 
         // If escalation is enabled and we're in 'stopped' mode, skip all
         if (!empty($settings['escalate_cooldown']) && get_option(self::COOLDOWN_LEVEL_OPTION) === 'stopped') {
@@ -290,9 +431,11 @@ class BruteForceSettings
                 set_transient($cooldown_key, 1, $escalation_minutes * MINUTE_IN_SECONDS);
 
                 if ($current_level >= count(self::ESCALATION_LEVELS) - 1) {
-                    // Reached max level — send stopped notification
+                    // Reached max level — send stopped notification and remember
+                    // when, so the level can reset itself later.
                     self::send_stopped_notification($to, $settings);
                     update_option(self::COOLDOWN_LEVEL_OPTION, 'stopped');
+                    update_option(self::STOPPED_OPTION, time());
                 } else {
                     update_option(self::COOLDOWN_LEVEL_OPTION, $current_level + 1);
                 }
@@ -393,12 +536,9 @@ class BruteForceSettings
 
         $headers = apply_filters('fiveprayer_brute_force_email_headers', ['Content-Type: text/plain; charset=UTF-8'], $test_ip);
 
-        // Always log the email content to the debug log so developers can inspect it
-        // even when no mail server is configured (e.g., local development).
-        Logger::info(
-            'Test email prepared — To: ' . $to . ' | Subject: ' . $subject . " | Body:\n" . $message,
-            'BruteForceSettings'
-        );
+        // Log that the message was prepared, but never the body: it contains
+        // the recipient address and is a data leak with no diagnostic value.
+        Logger::info('Test email prepared — To: ' . $to . ' | Subject: ' . $subject, 'BruteForceSettings');
 
         $headers = self::apply_custom_from_headers($headers);
         $sent = wp_mail($to, $subject, $message, $headers);
@@ -458,6 +598,7 @@ class BruteForceSettings
     public static function reset_email_cooldown(): bool
     {
         delete_option(self::COOLDOWN_LEVEL_OPTION);
+        delete_option(self::STOPPED_OPTION);
         return delete_transient('fp_brute_email_cooldown');
     }
 
@@ -477,6 +618,8 @@ class BruteForceSettings
      */
     public static function get_cooldown_level_info(): array
     {
+        self::maybe_reset_stopped_level();
+
         $level = get_option(self::COOLDOWN_LEVEL_OPTION, 0);
 
         if ($level === 'stopped') {
@@ -533,7 +676,10 @@ class BruteForceSettings
 
         foreach ($rows as $row) {
             $ip = str_replace($prefix, '', $row->option_name);
-            if (!$ip) {
+
+            // The e-mail flood-control transient shares the prefix but is not
+            // an address, and must not appear in the tracked list.
+            if (!$ip || 'email_cooldown' === $ip) {
                 continue;
             }
 

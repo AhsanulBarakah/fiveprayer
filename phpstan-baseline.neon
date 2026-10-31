@@ -127,12 +127,6 @@ parameters:
 			path: php/classes/core/API/ApiKeyManager.php
 
 		-
-			message: '#^Method FivePrayer\\Core\\API\\ApiKeyManager\:\:migrate_legacy_keys\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: php/classes/core/API/ApiKeyManager.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\API\\ApiKeyManager\:\:regenerate_key\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
