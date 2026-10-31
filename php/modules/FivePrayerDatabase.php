@@ -13,12 +13,13 @@ defined('ABSPATH') || exit;
  * Initialize the database query monitoring system (when explicitly enabled)
  */
 function fiveprayer_initialize_db_monitoring() {
-    // Only load query monitoring when explicitly enabled
-    $explicit_monitor = \FivePrayer\Core\Security\SecurityHelper::has_query_arg('fiveprayer_db_monitor') &&
-        \FivePrayer\Core\Security\SecurityHelper::get_sanitized_get_input('fiveprayer_db_monitor') === 'true';
+    // Only the FIVEPRAYER_DB_MONITOR constant enables query monitoring. A
+    // ?fiveprayer_db_monitor=true query argument used to do it too, which let
+    // any visitor define SAVEQUERIES and have every query of that request kept
+    // in memory.
     $constant_enabled = defined('FIVEPRAYER_DB_MONITOR') && FIVEPRAYER_DB_MONITOR;
 
-    if ($explicit_monitor || $constant_enabled) {
+    if ($constant_enabled) {
         // Enable query logging for monitoring
         if (!defined('SAVEQUERIES')) {
             define('SAVEQUERIES', true); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- SAVEQUERIES is a WordPress core constant, not one this plugin introduces.
@@ -41,8 +42,6 @@ if (!function_exists('fiveprayer_trigger_db_query_report')) {
     function fiveprayer_trigger_db_query_report() {
         // Check if monitoring is enabled
         $monitoring_enabled = isset($GLOBALS['fiveprayer_query_monitor']) ||
-                             (\FivePrayer\Core\Security\SecurityHelper::has_query_arg('fiveprayer_db_monitor') &&
-                              \FivePrayer\Core\Security\SecurityHelper::get_sanitized_get_input('fiveprayer_db_monitor') === 'true') ||
                              (defined('FIVEPRAYER_DB_MONITOR') && FIVEPRAYER_DB_MONITOR);
 
         if ($monitoring_enabled) {
@@ -75,7 +74,7 @@ if (!function_exists('fiveprayer_trigger_db_query_report')) {
                 return false;
             }
         } else {
-            \FivePrayer\Core\Logging\Logger::error('[FivePrayer] Database query reporting requires monitoring to be enabled with ?fiveprayer_db_monitor=true or FIVEPRAYER_DB_MONITOR constant.', 'FivePrayerDatabase');
+            \FivePrayer\Core\Logging\Logger::error('[FivePrayer] Database query reporting requires monitoring to be enabled with the FIVEPRAYER_DB_MONITOR constant.', 'FivePrayerDatabase');
             return false;
         }
     }
