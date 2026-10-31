@@ -28,10 +28,55 @@ class DynamicTextParser {
             return $content;
         }
 
-        // Pattern to match fp_* dynamic text patterns
-        $pattern = '/\bfp_([a-zA-Z_0-9]+)\b/';
-        
-        return preg_replace_callback($pattern, [$this, 'replace_dynamic_text'], $content);
+        // Only text nodes are rewritten. wp_html_split() keeps tags, comments
+        // and text apart, so a class name such as `fp_timetable_monthly`, a URL
+        // or a script is never replaced with rendered shortcode HTML.
+        $chunks = wp_html_split($content);
+
+        if (!is_array($chunks)) {
+            return $content;
+        }
+
+        $pattern       = '/\bfp_([a-zA-Z_0-9]+)\b/';
+        $skip_elements = ['script', 'style', 'textarea', 'code', 'pre'];
+        $open_skipped  = [];
+        $parsed        = '';
+
+        foreach ($chunks as $chunk) {
+            if ('' === $chunk) {
+                continue;
+            }
+
+            // A chunk that does not start with `<` is a text node.
+            if ('<' !== $chunk[0]) {
+                $parsed .= empty($open_skipped)
+                    ? (string) preg_replace_callback($pattern, [$this, 'replace_dynamic_text'], $chunk)
+                    : $chunk;
+                continue;
+            }
+
+            $parsed .= $chunk;
+
+            if (preg_match('#^<\s*/\s*([a-zA-Z0-9]+)#', $chunk, $closing)) {
+                // Close the matching element, and anything it contained.
+                $tag = strtolower($closing[1]);
+
+                for ($index = count($open_skipped) - 1; $index >= 0; $index--) {
+                    if ($open_skipped[$index] === $tag) {
+                        array_splice($open_skipped, $index);
+                        break;
+                    }
+                }
+            } elseif (preg_match('#^<\s*([a-zA-Z0-9]+)#', $chunk, $opening)) {
+                $tag = strtolower($opening[1]);
+
+                if (in_array($tag, $skip_elements, true) && !preg_match('#/\s*>$#', $chunk)) {
+                    $open_skipped[] = $tag;
+                }
+            }
+        }
+
+        return $parsed;
     }
 
     /**

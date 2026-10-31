@@ -41,7 +41,7 @@
     "test": "npm run test:unit && npm run test:js && npm run test:php",
     "test:unit": "vitest run",
     "test:js": "node tests/js/test-tv-display-fit.mjs",
-    "test:php": "php tests/php/test-security-hardening.php && php tests/php/test-css-scoping.php && php tests/php/test-timetable-month.php && php tests/php/test-asr-second.php && php tests/php/test-asr2-translation.php",
+    "test:php": "php tests/php/test-security-hardening.php && php tests/php/test-css-scoping.php && php tests/php/test-timetable-month.php && php tests/php/test-asr-second.php && php tests/php/test-asr2-translation.php && php tests/php/test-dynamic-text.php",
     "test:tv": "node tests/js/test-tv-display-fit.mjs",
     "docs:screenshots": "node tools/docs-screenshots.mjs",
     "readme:screenshots": "node tools/setup-screenshots.mjs",
