@@ -40,6 +40,15 @@ class BreakdanceAPI {
             return;
         }
 
+        // This action is open to logged-out visitors and reads the plugin's meta
+        // off whatever post it is given, so a draft or private post only answers
+        // to someone allowed to read it.
+        $post = get_post($post_id);
+        if (!$post || (!is_post_publicly_viewable($post) && !current_user_can('read_post', $post_id))) {
+            wp_send_json_error('Invalid post ID');
+            return;
+        }
+
         $meta_key = 'fp_' . $field_key;
         $meta_value = get_post_meta($post_id, $meta_key, true);
 
