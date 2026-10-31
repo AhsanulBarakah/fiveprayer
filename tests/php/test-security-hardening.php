@@ -529,6 +529,51 @@ fiveprayer_assert(
 fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
 
 // ---------------------------------------------------------------------------
+// ESI enablement
+// ---------------------------------------------------------------------------
+
+// ESI support is decided from server-side signals only. A visitor controls both
+// the headers and `?esi=1`, so honouring them let one request get a page cached
+// with <esi:include> tags on a site that is not on LiteSpeed.
+$fiveprayer_esi_server = $_SERVER;
+$fiveprayer_esi_get    = $_GET;
+
+$_SERVER['HTTP_X_LITESPEED_CACHE_CONTROL'] = 'no-cache';
+$_SERVER['HTTP_X_LSCACHE']                 = '1';
+$_SERVER['HTTP_X_LIVESPEED_ESI']           = '1';
+$_SERVER['HTTP_X_LITESPEED_ESI']           = '1';
+unset($_SERVER['SERVER_SOFTWARE']);
+$_GET['esi'] = '1';
+
+fiveprayer_assert(false === $fiveprayer_esi->isESIEnabled(), 'request headers and ?esi=1 do not switch ESI on');
+fiveprayer_assert(
+    false === strpos((string) $fiveprayer_esi->wrapDynamicContent('content', 'current_time', []), '<esi:include'),
+    'a crafted request does not get the content wrapped in an ESI include'
+);
+
+// A site owner can still force the decision either way.
+$fiveprayer_force_esi = static function () {
+    return true;
+};
+add_filter('fiveprayer_esi_enabled', $fiveprayer_force_esi);
+fiveprayer_assert(true === $fiveprayer_esi->isESIEnabled(), 'the fiveprayer_esi_enabled filter can switch ESI on');
+fiveprayer_assert(
+    false !== strpos((string) $fiveprayer_esi->wrapDynamicContent('content', 'current_time', []), '<esi:include'),
+    'a forced-on ESI wraps the content'
+);
+remove_filter('fiveprayer_esi_enabled', $fiveprayer_force_esi);
+
+$fiveprayer_force_no_esi = static function () {
+    return false;
+};
+add_filter('fiveprayer_esi_enabled', $fiveprayer_force_no_esi);
+fiveprayer_assert(false === $fiveprayer_esi->isESIEnabled(), 'the fiveprayer_esi_enabled filter can switch ESI off');
+remove_filter('fiveprayer_esi_enabled', $fiveprayer_force_no_esi);
+
+$_SERVER = $fiveprayer_esi_server;
+$_GET    = $fiveprayer_esi_get;
+
+// ---------------------------------------------------------------------------
 // Single-prayer field allowlist
 // ---------------------------------------------------------------------------
 

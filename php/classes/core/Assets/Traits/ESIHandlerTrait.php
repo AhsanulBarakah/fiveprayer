@@ -7,19 +7,28 @@ defined('ABSPATH') || exit;
 trait ESIHandlerTrait
 {
     /**
-     * Check if ESI is supported and enabled
+     * Check if ESI is supported and enabled.
+     *
+     * Only server-side signals decide. The request headers
+     * (`X-LiteSpeed-Cache-Control`, `X-LSCACHE`, `X-LiteSpeed-ESI`, …) and the
+     * `?esi=1` argument are chosen by the visitor, so honouring them let one
+     * crafted request get a page cached with `<esi:include>` tags on a site
+     * that is not on LiteSpeed — which then showed the tags instead of the
+     * prayer times to every visitor. `isESIRequest()` still recognises an
+     * incoming fragment, but it can no longer turn wrapping on by itself.
+     *
+     * @return bool
      */
     public function isESIEnabled()
     {
-        $has_lite_speed_cache = defined('LSCWP_V') || defined('LITESPEED_SERVER_VERSION');
-        $is_esi_request = $this->isESIRequest();
-        $has_esi_support = $this->hasESISupport();
-
-        $has_esi_indicator = isset($_SERVER['HTTP_X_LITESPEED_CACHE_CONTROL']) ||
-                            isset($_SERVER['HTTP_X_LSCACHE']) ||
-                            isset($_SERVER['HTTP_X_LIVESPEED_ESI']);
-
-        return $has_lite_speed_cache || $is_esi_request || $has_esi_support || $has_esi_indicator;
+        /**
+         * Filter whether dynamic content is wrapped in an ESI include.
+         *
+         * @since 3.0.0
+         *
+         * @param bool $enabled Whether the server itself supports ESI.
+         */
+        return (bool) apply_filters('fiveprayer_esi_enabled', $this->hasServerESISupport());
     }
 
     /**
@@ -33,12 +42,15 @@ trait ESIHandlerTrait
     }
 
     /**
-     * Check for ESI support in the environment
+     * Whether the server itself supports ESI.
+     *
+     * @return bool
      */
-    private function hasESISupport()
+    private function hasServerESISupport()
     {
         return function_exists('do_action') &&
                (defined('LSCWP_V') ||
+                defined('LITESPEED_SERVER_VERSION') ||
                 class_exists('\LiteSpeed\Purge') ||
                 $this->checkServerSupportsESI());
     }
