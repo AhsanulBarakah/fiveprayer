@@ -33,7 +33,14 @@ trait TimetableRendererTrait
             $cache_key = 'fp_month_shortcode_' . md5(wp_json_encode($atts) . '|' . get_locale() . '|' . gmdate('Y-m-d-H') . '|' . $month_selector . '|' . $this->shortcode_render_fingerprint());
             $preview_param = SecurityHelper::get_sanitized_get_input('preview');
             $context_param = SecurityHelper::get_sanitized_get_input('context');
-            $bypass_cache = is_admin() || !empty($preview_param) || (!empty($context_param) && $context_param === 'edit');
+
+            // Previewing is an editor action. Anyone can append ?preview= to a
+            // URL, so the query argument alone must not force a full render on
+            // every request and skip the fragment cache.
+            $editor_preview = current_user_can('edit_posts') &&
+                (!empty($preview_param) || (!empty($context_param) && $context_param === 'edit'));
+
+            $bypass_cache = is_admin() || $editor_preview;
 
             if (!$bypass_cache) {
                 $cached = get_transient($cache_key);
@@ -108,9 +115,14 @@ trait TimetableRendererTrait
         $context_param = SecurityHelper::get_sanitized_get_input('context');
 
         $host = sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST'] ?? ''));
+
+        // Only an editor may use the preview query arguments to skip the cache;
+        // any visitor can add them to a URL.
+        $editor_preview = current_user_can('edit_posts') &&
+            (!empty($preview_param) || (!empty($context_param) && $context_param === 'edit'));
+
         $bypass_cache = is_admin() ||
-                       !empty($preview_param) ||
-                       (!empty($context_param) && $context_param === 'edit') ||
+                       $editor_preview ||
                        (defined('WP_DEBUG') && WP_DEBUG) ||
                        (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ||
                        $host === 'localhost' ||
