@@ -176,7 +176,11 @@ class TranslateController extends RestControllerBase
         PrayerDataCache::invalidateAll();
 
         // Also purge external cache plugins to ensure changes are visible immediately
-        $this->purge_external_caches();
+        // One shared purge implementation; it deliberately leaves the object
+        // cache alone instead of flushing the whole site.
+        if (function_exists('fiveprayer_purge_external_caches')) {
+            fiveprayer_purge_external_caches();
+        }
 
         return rest_ensure_response(['success' => true, 'message' => 'Translations saved successfully']);
     }
@@ -256,36 +260,6 @@ class TranslateController extends RestControllerBase
         return $clean;
     }
 
-    private function purge_external_caches() {
-        // WP Rocket
-        if (function_exists('rocket_clean_domain')) {
-            rocket_clean_domain();
-        }
-
-        // LiteSpeed
-        if (function_exists('do_action')) {
-            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party LiteSpeed Cache hook.
-            do_action('litespeed_purge_all');
-        }
-
-        // W3 Total Cache
-        if (function_exists('w3tc_flush_all')) {
-            w3tc_flush_all();
-        }
-
-        // WP Super Cache
-        if (function_exists('wp_cache_clear_cache')) {
-            wp_cache_clear_cache();
-        }
-
-        // WP Fastest Cache
-        if (function_exists('wpfc_clear_all_cache')) {
-            wpfc_clear_all_cache(true); // true for clear all sites in multisite
-        }
-
-        // Clear transients
-        wp_cache_flush();
-    }
 
     public function get_translations()
     {

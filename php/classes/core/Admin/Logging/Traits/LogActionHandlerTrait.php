@@ -116,27 +116,10 @@ trait LogActionHandlerTrait
     }
 
     private function purge_external_caches(): void {
-        if (function_exists('rocket_clean_domain')) {
-            \rocket_clean_domain();
+        // The shared helper never flushes the object cache, so saving the log
+        // level no longer empties it for every plugin on the site.
+        if (function_exists('fiveprayer_purge_external_caches')) {
+            fiveprayer_purge_external_caches();
         }
-
-        if (function_exists('do_action')) {
-            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party LiteSpeed Cache hook.
-            do_action('litespeed_purge_all');
-        }
-
-        if (function_exists('w3tc_flush_all')) {
-            \w3tc_flush_all();
-        }
-
-        if (function_exists('wp_cache_clear_cache')) {
-            \wp_cache_clear_cache();
-        }
-
-        if (function_exists('wpfc_clear_all_cache')) {
-            \wpfc_clear_all_cache(true);
-        }
-
-        \wp_cache_flush();
     }
 }

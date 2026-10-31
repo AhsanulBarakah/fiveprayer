@@ -309,7 +309,7 @@ if (!class_exists(__NAMESPACE__ . '\Hijra')) {
             
             // Clear all transients for this plugin. This DELETE is cache
             // maintenance rather than a data read, so there is nothing to cache
-            // about it; the wp_cache_flush() call below clears the object cache.
+            // about it.
             $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $wpdb->prepare(
                     "DELETE FROM $wpdb->options 
@@ -319,10 +319,13 @@ if (!class_exists(__NAMESPACE__ . '\Hijra')) {
                     '%' . $wpdb->esc_like('_transient_timeout_' . $this->cache_key) . '%'
                 )
             );
-            
-            // Clear object cache if possible
-            if (function_exists('wp_cache_flush')) {
-                wp_cache_flush();
+
+            // Drop the object-cache copies of the keys this class reads. A
+            // wp_cache_flush() would empty every other plugin's cache too.
+            $transient_keys = ['hijralocale', 'ramadan', 'activeLanguage', 'hijra_months', 'hijra_numbers'];
+
+            foreach ($transient_keys as $meta_key) {
+                delete_transient($this->cache_key . '_' . $meta_key);
             }
         }
     }

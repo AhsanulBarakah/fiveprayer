@@ -85,43 +85,17 @@ class PrayerTimeTableController extends RestControllerBase
 
         PrayerDataCache::invalidateAll();
 
-        // Also purge external cache plugins to ensure changes are visible immediately
-        $this->purge_external_caches();
+        // Also purge external cache plugins to ensure changes are visible
+        // immediately. The shared helper deliberately leaves the object cache
+        // alone; this controller used to flush it for the whole site.
+        if (function_exists('fiveprayer_purge_external_caches')) {
+            fiveprayer_purge_external_caches();
+        }
 
         // PrayerDataCache::getProcessedTimeTable();
         return rest_ensure_response(['message' => 'Timetable updated']);
     }
 
-    private function purge_external_caches() {
-        // WP Rocket
-        if (function_exists('rocket_clean_domain')) {
-            rocket_clean_domain();
-        }
-
-        // LiteSpeed
-        if (function_exists('do_action')) {
-            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party LiteSpeed Cache hook.
-            do_action('litespeed_purge_all');
-        }
-
-        // W3 Total Cache
-        if (function_exists('w3tc_flush_all')) {
-            w3tc_flush_all();
-        }
-
-        // WP Super Cache
-        if (function_exists('wp_cache_clear_cache')) {
-            wp_cache_clear_cache();
-        }
-
-        // WP Fastest Cache
-        if (function_exists('wpfc_clear_all_cache')) {
-            wpfc_clear_all_cache(true); // true for clear all sites in multisite
-        }
-
-        // Clear transients
-        wp_cache_flush();
-    }
 
     public function get_timetable(WP_REST_Request $request)
     {
