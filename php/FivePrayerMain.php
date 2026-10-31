@@ -44,17 +44,14 @@ $fiveprayer_esi_handler_path = __DIR__ . '/classes/core/Assets/ESIDynamicContent
 if (file_exists($fiveprayer_esi_handler_path)) {
     require_once $fiveprayer_esi_handler_path;
 
-    // Initialize ESI handler early in the WordPress lifecycle
+    // Initialize ESI handler early in the WordPress lifecycle. init:1 is the
+    // only place that serves a fragment request: the same callback used to be
+    // hooked on plugins_loaded:1 as well, so a fragment request was handled
+    // twice (and the second copy could never run, since the first exits).
     add_action('init', function() {
         $esi_handler = \FivePrayer\Core\Assets\ESIDynamicContentHandler::getInstance();
         $esi_handler->init();
     }, 1); // Run as early as possible in the init process
-
-    // Check if this is an ESI request and handle it immediately
-    add_action('plugins_loaded', function() {
-        $esi_handler = \FivePrayer\Core\Assets\ESIDynamicContentHandler::getInstance();
-        $esi_handler->handleESIRequest();
-    }, 1); // Check very early to handle ESI requests before other processing
 }
 
 /**

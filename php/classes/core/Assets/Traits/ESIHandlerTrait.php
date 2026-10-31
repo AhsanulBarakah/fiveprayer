@@ -69,20 +69,69 @@ trait ESIHandlerTrait
     }
 
     /**
+     * Content types an ESI fragment may ask for.
+     *
+     * Anything else is refused, so a URL that is somehow signed cannot be
+     * pointed at a renderer that was never meant to be addressable.
+     *
+     * @return string[]
+     */
+    private function getESIAllowedTypes()
+    {
+        return [
+            'current_time',
+            'next_prayer',
+            'single_prayer',
+            'daily_prayer_table',
+            'monthly_prayer_table',
+        ];
+    }
+
+    /**
+     * Signature for one ESI request.
+     *
+     * Covers the type, the attributes and the id together. Signing only the id
+     * let anyone who copied one ESI URL from a public page swap `type` and
+     * `atts` and have the fragment render any shortcode with any arguments.
+     *
+     * wp_hash() is keyed on the site's salts and, unlike a nonce, does not
+     * expire: a page cached for a week must keep working, and an expired nonce
+     * answered 403 to every visitor until the cache was purged.
+     *
+     * @param string $shortcode_type Content type requested.
+     * @param string $atts_encoded   Encoded attributes exactly as they appear in
+     *                               the URL, or an empty string when there are none.
+     * @param string $esi_id         Fragment id.
+     * @return string
+     */
+    private function generateESISignature($shortcode_type, $atts_encoded, $esi_id)
+    {
+        return wp_hash($shortcode_type . '|' . $atts_encoded . '|' . $esi_id);
+    }
+
+    /**
      * Generate ESI URL for dynamic content
      */
     private function generateESIURL($shortcode_type, $atts, $esi_id)
     {
+        // The signature is computed over the raw base64. The URL carries the
+        // urlencoded form because add_query_arg() does not encode values
+        // itself, and PHP hands the decoded value back on the way in — signing
+        // the encoded form would fail on every request that has attributes.
+        $atts_encoded = !empty($atts)
+            ? base64_encode((string) wp_json_encode($atts))
+            : '';
+
         $params = [
             'fiveprayer_esi' => 1,
             'type' => $shortcode_type,
             'id' => $esi_id,
-            'nonce' => wp_create_nonce('fiveprayer_esi_' . $esi_id),
+            'sig' => $this->generateESISignature($shortcode_type, $atts_encoded, $esi_id),
             'cb' => time()
         ];
 
-        if (!empty($atts)) {
-            $params['atts'] = urlencode(base64_encode(json_encode($atts)));
+        if ('' !== $atts_encoded) {
+            $params['atts'] = urlencode($atts_encoded);
         }
 
         return add_query_arg($params, home_url('/'));

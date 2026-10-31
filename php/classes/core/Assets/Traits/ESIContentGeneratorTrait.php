@@ -17,23 +17,39 @@ trait ESIContentGeneratorTrait
             return false;
         }
 
-        $esi_id = SecurityHelper::get_sanitized_get_input('id');
-        $nonce  = SecurityHelper::get_sanitized_get_input('nonce');
+        $esi_id       = SecurityHelper::get_sanitized_get_input('id');
+        $type         = (string) SecurityHelper::get_sanitized_get_input('type');
+        $signature    = (string) SecurityHelper::get_sanitized_get_input('sig');
+        $atts_encoded = SecurityHelper::has_query_arg('atts')
+            ? (string) SecurityHelper::get_sanitized_get_input('atts')
+            : '';
 
-        if (!wp_verify_nonce($nonce, 'fiveprayer_esi_' . $esi_id)) {
+        // The signature covers the type and the attributes as well as the id,
+        // so editing a URL copied from a public page is refused even though the
+        // page it came from is genuine.
+        if (!hash_equals($this->generateESISignature($type, $atts_encoded, $esi_id), $signature)) {
             wp_die('ESI Security check failed', 'Security Error', ['response' => 403]);
             return true;
         }
 
-        $type = SecurityHelper::get_sanitized_get_input('type');
+        if (!in_array($type, $this->getESIAllowedTypes(), true)) {
+            wp_die('ESI content type not allowed', 'Security Error', ['response' => 400]);
+            return true;
+        }
+
         $atts = [];
 
-        if (SecurityHelper::has_query_arg('atts')) {
-            $decoded_atts = json_decode(base64_decode(SecurityHelper::get_sanitized_get_input('atts')), true);
-            if ($decoded_atts !== null) {
+        if ('' !== $atts_encoded) {
+            // base64_decode(..., true) returns false for anything that is not
+            // base64, and only a decoded array is kept: json_decode() can also
+            // return a scalar or null, which must not reach shortcode_atts().
+            $decoded_atts = json_decode((string) base64_decode($atts_encoded, true), true);
+            if (is_array($decoded_atts)) {
                 $atts = $decoded_atts;
             }
         }
+
+        $atts = $this->sanitizeESIAtts($type, $atts);
 
         $content = $this->generateDynamicContent($type, $atts);
 
@@ -47,6 +63,36 @@ trait ESIContentGeneratorTrait
 
         echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit;
+    }
+
+    /**
+     * Drop every attribute the matching shortcode does not accept.
+     *
+     * The ESI fragment runs the same renderer as the shortcode, so it has to run
+     * the same attribute filter: an argument the shortcode would ignore must not
+     * reach the renderer through the fragment instead.
+     *
+     * @param string $type Content type requested.
+     * @param array  $atts Decoded attributes from the request.
+     * @return array
+     */
+    private function sanitizeESIAtts($type, array $atts)
+    {
+        switch ($type) {
+            case 'single_prayer':
+                $atts            = shortcode_atts(['field' => ''], $atts);
+                $atts['field']   = sanitize_key((string) $atts['field']);
+                return $atts;
+            case 'daily_prayer_table':
+            case 'monthly_prayer_table':
+                // ShortCodeVerticalDailyPrayer::renderPrayerTable() reads no
+                // attributes, and ShortCodeTimetableMonth::fpTimetableMonth()
+                // runs exactly this call with the same empty defaults — so the
+                // fragment drops everything here as well.
+                return shortcode_atts([], $atts);
+            default:
+                return [];
+        }
     }
 
     /**

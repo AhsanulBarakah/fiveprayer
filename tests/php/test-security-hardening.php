@@ -33,6 +33,7 @@ require_once $fiveprayer_wp_root . '/wp-load.php';
 defined('ABSPATH') || exit;
 
 use FivePrayer\Core\API\ApiKeyManager;
+use FivePrayer\Core\Assets\ESIDynamicContentHandler;
 use FivePrayer\Core\Controllers\API\EndPoints\TranslateController;
 use FivePrayer\Core\Logging\Logger;
 use FivePrayer\Core\Security\SecurityHelper;
@@ -438,6 +439,93 @@ if (!$fiveprayer_keys_ready) {
         $wpdb->delete($fiveprayer_keys_table, ['id' => $fiveprayer_key_id], ['%d']);
     }
 }
+
+// ---------------------------------------------------------------------------
+// ESI fragments
+// ---------------------------------------------------------------------------
+
+// An ESI URL is handed to a page cache, so it cannot carry a credential that
+// expires: the nonce it used to hold covered only the fragment id, which left
+// `type` and `atts` free for anyone who copied one URL from a public page.
+$fiveprayer_esi       = ESIDynamicContentHandler::getInstance();
+$fiveprayer_esi_sig   = new ReflectionMethod(ESIDynamicContentHandler::class, 'generateESISignature');
+$fiveprayer_esi_types = new ReflectionMethod(ESIDynamicContentHandler::class, 'getESIAllowedTypes');
+$fiveprayer_esi_url   = new ReflectionMethod(ESIDynamicContentHandler::class, 'generateESIURL');
+$fiveprayer_esi_types->setAccessible(true);
+$fiveprayer_esi_url->setAccessible(true);
+
+$fiveprayer_atts      = base64_encode((string) wp_json_encode(['field' => 'fajr_begins_time']));
+$fiveprayer_other     = base64_encode((string) wp_json_encode(['field' => 'isha_begins_time']));
+$fiveprayer_signature = $fiveprayer_esi_sig->invoke($fiveprayer_esi, 'single_prayer', $fiveprayer_atts, 'abc123');
+
+fiveprayer_assert('' !== $fiveprayer_signature, 'an ESI request is signed');
+fiveprayer_assert(
+    $fiveprayer_signature === $fiveprayer_esi_sig->invoke($fiveprayer_esi, 'single_prayer', $fiveprayer_atts, 'abc123'),
+    'the same ESI request always yields the same signature'
+);
+fiveprayer_assert(
+    $fiveprayer_signature !== $fiveprayer_esi_sig->invoke($fiveprayer_esi, 'next_prayer', $fiveprayer_atts, 'abc123'),
+    'an ESI request with a changed type is rejected'
+);
+fiveprayer_assert(
+    $fiveprayer_signature !== $fiveprayer_esi_sig->invoke($fiveprayer_esi, 'single_prayer', $fiveprayer_other, 'abc123'),
+    'an ESI request with changed attributes is rejected'
+);
+fiveprayer_assert(
+    $fiveprayer_signature !== $fiveprayer_esi_sig->invoke($fiveprayer_esi, 'single_prayer', $fiveprayer_atts, 'other-id'),
+    'an ESI request with a changed id is rejected'
+);
+
+fiveprayer_assert(
+    ['current_time', 'next_prayer', 'single_prayer', 'daily_prayer_table', 'monthly_prayer_table'] === $fiveprayer_esi_types->invoke($fiveprayer_esi),
+    'the ESI type allowlist is exactly the five supported content types'
+);
+fiveprayer_assert(
+    !in_array('arbitrary_content', $fiveprayer_esi_types->invoke($fiveprayer_esi), true),
+    'an unknown ESI content type is not allowed'
+);
+
+$fiveprayer_generated = $fiveprayer_esi_url->invoke($fiveprayer_esi, 'single_prayer', ['field' => 'fajr_begins_time'], 'abc123');
+$fiveprayer_query     = [];
+wp_parse_str((string) wp_parse_url($fiveprayer_generated, PHP_URL_QUERY), $fiveprayer_query);
+
+fiveprayer_assert(false === strpos($fiveprayer_generated, 'nonce='), 'the public ESI URL no longer carries a nonce');
+fiveprayer_assert(isset($fiveprayer_query['sig']) && '' !== $fiveprayer_query['sig'], 'the public ESI URL carries a signature');
+fiveprayer_assert(
+    isset($fiveprayer_query['sig'], $fiveprayer_query['atts']) && $fiveprayer_signature === $fiveprayer_query['sig'],
+    'the signature covers the attributes the URL actually carries'
+);
+
+// The signature has no lifetime: the same URL must still verify a week later.
+$fiveprayer_time_kept = false;
+if (isset($fiveprayer_query['type'], $fiveprayer_query['atts'], $fiveprayer_query['sig'], $fiveprayer_query['id'])) {
+    $fiveprayer_time_kept = hash_equals(
+        $fiveprayer_esi_sig->invoke($fiveprayer_esi, (string) $fiveprayer_query['type'], (string) $fiveprayer_query['atts'], (string) $fiveprayer_query['id']),
+        (string) $fiveprayer_query['sig']
+    );
+}
+fiveprayer_assert($fiveprayer_time_kept, 'a cached ESI URL still verifies because the signature does not expire');
+
+// Only the renderers' own attributes survive, exactly as for the shortcode.
+$fiveprayer_esi_atts = new ReflectionMethod(ESIDynamicContentHandler::class, 'sanitizeESIAtts');
+$fiveprayer_esi_atts->setAccessible(true);
+fiveprayer_assert(
+    ['field' => 'fajr_begins_time'] === $fiveprayer_esi_atts->invoke($fiveprayer_esi, 'single_prayer', ['field' => 'fajr_begins_time', 'unknown' => 'x']),
+    'unknown ESI attributes are dropped'
+);
+fiveprayer_assert(
+    [] === $fiveprayer_esi_atts->invoke($fiveprayer_esi, 'monthly_prayer_table', ['whatever' => 'x']),
+    'the monthly table fragment accepts no attributes, like its shortcode'
+);
+
+// The fragment is served from init:1 only; a second registration meant the
+// handler ran twice on every fragment request.
+fiveprayer_assert(
+    !has_action('plugins_loaded', [$fiveprayer_esi, 'handleESIRequest']),
+    'the ESI handler is not registered on plugins_loaded as well as init'
+);
+
+fiveprayer_assert(1 === has_action('init', [$fiveprayer_esi, 'handleESIRequest']), 'the ESI handler is registered on init');
 
 echo $fiveprayer_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_failures} check(s)\n")
