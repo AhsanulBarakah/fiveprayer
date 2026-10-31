@@ -288,15 +288,33 @@ trait ApiAdminAjaxHandlerTrait
         $subject = filter_input(INPUT_POST, 'subject');
         $escalate_cooldown = filter_input(INPUT_POST, 'escalate_cooldown', FILTER_VALIDATE_BOOLEAN);
 
+        // Zero attempts or a negative window either turns the protection off or
+        // locks everyone out until the row is fixed by hand, so each value is
+        // kept inside the range the settings screen offers.
+        $max_attempts    = $max_attempts !== false ? max(1, min(1000, $max_attempts)) : 10;
+        $lockout_minutes = $lockout_minutes !== false ? max(1, min(10080, $lockout_minutes)) : 15;
+        $notify_cooldown = $notify_cooldown !== false ? max(1, min(10080, $notify_cooldown)) : 60;
+
+        $notify_email = (string) $notify_email;
+        $from_email   = (string) $from_email;
+
+        if ('' !== $notify_email && !is_email($notify_email)) {
+            wp_send_json_error(['message' => esc_html__('Enter a valid notification email address.', 'fiveprayer')]);
+        }
+
+        if ('' !== $from_email && !is_email($from_email)) {
+            wp_send_json_error(['message' => esc_html__('Enter a valid from email address.', 'fiveprayer')]);
+        }
+
         $settings = [
             'enabled' => $enabled,
-            'max_attempts' => $max_attempts !== false ? $max_attempts : 10,
-            'lockout_minutes' => $lockout_minutes !== false ? $lockout_minutes : 15,
+            'max_attempts' => $max_attempts,
+            'lockout_minutes' => $lockout_minutes,
             'notify_enabled' => $notify_enabled,
-            'notify_email' => $notify_email ?: '',
-            'notify_cooldown' => $notify_cooldown !== false ? $notify_cooldown : 60,
+            'notify_email' => $notify_email,
+            'notify_cooldown' => $notify_cooldown,
             'from_name' => $from_name ? sanitize_text_field($from_name) : '',
-            'from_email' => $from_email ?: '',
+            'from_email' => $from_email,
             'subject' => $subject ? sanitize_text_field($subject) : '',
             'escalate_cooldown' => $escalate_cooldown,
         ];
