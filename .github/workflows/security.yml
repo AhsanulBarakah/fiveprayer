@@ -125,7 +125,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.wp-cache
-          key: wp-tarball-${{ runner.os }}-6.7
+          key: wp-tarball-${{ runner.os }}-7.1
 
       # The same fixture installer tools/php-suite.sh uses, so this job and the
       # local runner cannot drift apart on how WordPress is set up.
@@ -136,10 +136,10 @@ jobs:
           set -euo pipefail
           WP_DIR="$FIVEPRAYER_WP_DIR"
           mkdir -p "$WP_DIR" "$HOME/.wp-cache"
-          if [ ! -f "$HOME/.wp-cache/wordpress-6.7.tar.gz" ]; then
-            curl -fsSL https://wordpress.org/wordpress-6.7.tar.gz -o "$HOME/.wp-cache/wordpress-6.7.tar.gz"
+          if [ ! -f "$HOME/.wp-cache/wordpress-7.1.tar.gz" ]; then
+            curl -fsSL https://wordpress.org/wordpress-7.1.tar.gz -o "$HOME/.wp-cache/wordpress-7.1.tar.gz"
           fi
-          tar -xzf "$HOME/.wp-cache/wordpress-6.7.tar.gz" -C "$WP_DIR" --strip-components=1
+          tar -xzf "$HOME/.wp-cache/wordpress-7.1.tar.gz" -C "$WP_DIR" --strip-components=1
           cp tests/php/fixtures/wp-config.php "$WP_DIR/wp-config.php"
           cp tests/php/fixtures/install-wordpress.php "$WP_DIR/install-wordpress.php"
           cp tests/php/fixtures/activate-plugin.php "$WP_DIR/activate-plugin.php"
