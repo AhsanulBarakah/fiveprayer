@@ -32,23 +32,48 @@ class ExternalApiController extends RestControllerBase
     public function __construct()
     {
         // Don't initialize ApiKeyManager in constructor to avoid errors during route registration
+
+        // Registered once, here, rather than from register_routes(): that method
+        // runs on every rest_api_init, so the same filter was added again on
+        // each pass.
+        add_filter('rest_pre_serve_request', [$this, 'add_cors_headers'], 10, 4);
+    }
+
+    /**
+     * Send the CORS headers for the external API routes.
+     *
+     * Authentication is the X-API-Key header, never a cookie, so a wildcard
+     * origin cannot leak a visitor's session. Echoing the caller's Origin back
+     * instead let a shared cache serve one site's response to another, and
+     * without `Vary: Origin` a cache was free to mix them up anyway.
+     *
+     * @param bool            $served  Whether the request has been served.
+     * @param WP_REST_Response $result  Response, when there is one.
+     * @param WP_REST_Request  $request Current request.
+     * @param WP_REST_Server   $server  REST server.
+     * @return bool
+     */
+    public function add_cors_headers($served, $result = null, $request = null, $server = null)
+    {
+        if (!$request instanceof WP_REST_Request || 0 !== strpos($request->get_route(), '/fiveprayer/v1/external/')) {
+            return $served;
+        }
+
+        if (!headers_sent()) {
+            header('Access-Control-Allow-Origin: *');
+            // append: keep any Vary other code has already sent.
+            header('Vary: Origin', false);
+            header('Access-Control-Allow-Methods: GET, OPTIONS');
+            header('Access-Control-Allow-Headers: X-API-Key, Content-Type, Authorization, Accept');
+            header('Access-Control-Max-Age: 86400');
+        }
+
+        return $served;
     }
 
     public function register_routes(): void
     {
         Logger::info('Registering external API routes', 'ExternalApiController');
-
-        // Add CORS headers for browser-based API consumers
-        add_filter('rest_pre_serve_request', function ($served, $result, $request, $server) {
-            if (strpos($request->get_route(), '/fiveprayer/v1/external/') === 0) {
-                $origin = $request->get_header('origin') ?: '*';
-                header('Access-Control-Allow-Origin: ' . $origin);
-                header('Access-Control-Allow-Methods: GET, OPTIONS');
-                header('Access-Control-Allow-Headers: X-API-Key, Content-Type, Authorization, Accept');
-                header('Access-Control-Max-Age: 86400');
-            }
-            return $served;
-        }, 10, 4);
 
         // Prayer times endpoints
         \register_rest_route($this->get_namespace(), '/external/prayer-times', [
