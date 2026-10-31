@@ -3901,48 +3901,6 @@ parameters:
 			path: php/classes/core/controllers/api/endpoints/ExternalApiController.php
 
 		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:estimate_plugin_memory\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:format_memory\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:format_memory\(\) has parameter \$bytes with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:handle_memory_test\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:test_assets_class\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:test_cache_system\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\MemoryTestController\:\:test_pathservice\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: php/classes/core/controllers/api/endpoints/MemoryTestController.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Controllers\\API\\EndPoints\\PngUrlController\:\:check_permission\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
