@@ -465,15 +465,12 @@ add_action('wp_ajax_fiveprayer_dismiss_reset_notice', 'fiveprayer_dismiss_reset_
  * Clear scheduled events on plugin deactivation
  */
 function fiveprayer_deactivation() {
-    $timestamp = wp_next_scheduled('fiveprayer_hourly_cache_check');
-    if ($timestamp) {
-        wp_unschedule_event($timestamp, 'fiveprayer_hourly_cache_check');
-    }
-
-    $timestamp2 = wp_next_scheduled('fiveprayer_twice_daily_cache_check');
-    if ($timestamp2) {
-        wp_unschedule_event($timestamp2, 'fiveprayer_twice_daily_cache_check');
-    }
+    // The two cache warmers and the next-prayer change watcher all stop with the
+    // plugin; the watcher used to be left behind, firing with no plugin code to
+    // answer it.
+    wp_clear_scheduled_hook('fiveprayer_hourly_cache_check');
+    wp_clear_scheduled_hook('fiveprayer_twice_daily_cache_check');
+    wp_clear_scheduled_hook('fiveprayer_check_next_prayer_change');
 }
 register_deactivation_hook(FIVEPRAYER_PLUGIN_FILE, 'fiveprayer_deactivation');
 
