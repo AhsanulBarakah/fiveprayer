@@ -21,6 +21,10 @@ declare global {
         savedHosts: string;
         /** This server's own addresses, which are always accepted. */
         serverAddresses: string;
+        /** WordPress's environment type, e.g. production or local. */
+        environmentType: string;
+        /** True when the switch is on but the production guard blocks it. */
+        blockedByEnvironment: boolean;
         nonce: string;
         ajaxAction: string;
         optionName: string;

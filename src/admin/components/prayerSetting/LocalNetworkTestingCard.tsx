@@ -65,7 +65,14 @@ const LocalNetworkTestingCard: React.FC = () => {
 	// nothing is rewritten and another device would get broken links. Surfaced
 	// as the row's second line instead of a line of its own, to keep the row
 	// short.
-	const notRunning = Boolean( enabled && localized && ! localized.requestIsLocal );
+	const notRunning = Boolean(
+		enabled && localized && ! localized.requestIsLocal && ! localized.blockedByEnvironment
+	);
+
+	// The router stays inert in a production environment, which is WordPress's
+	// default unless WP_ENVIRONMENT_TYPE is set. Say why here, or the switch
+	// looks on while nothing is shared.
+	const blockedByEnvironment = Boolean( enabled && localized?.blockedByEnvironment );
 
 	// The Host header is chosen by the visitor. Saving the address the TV uses
 	// here means a request with any other Host cannot switch the router on.
@@ -172,6 +179,14 @@ const LocalNetworkTestingCard: React.FC = () => {
 						{ __( 'Full guide', 'fiveprayer' ) }<span aria-hidden="true"> →</span>
 					</Link>
 				</p>
+				{ blockedByEnvironment && (
+					<p className="text-[10px] text-amber-700 mt-1">
+						{ __(
+							'WordPress reports this site as a production environment, so sharing stays off. Add define( \'WP_ENVIRONMENT_TYPE\', \'local\' ); to wp-config.php and reload this page.',
+							'fiveprayer'
+						) }
+					</p>
+				) }
 				{/* Same "what off means" line as the Pages/Posts rows, so the three
 				    switches of this page read the same way. */}
 				{ /* Only the hosts saved here, and this server's own addresses, may

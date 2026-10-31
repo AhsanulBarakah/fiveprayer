@@ -1008,6 +1008,19 @@ $fiveprayer_reset_router = static function () use ($fiveprayer_router_class) {
 update_option(LocalNetworkRouter::OPTION_NAME, 1);
 update_option(LocalNetworkRouter::HOSTS_OPTION, '192.168.1.104:10010');
 
+// The switch used to look enabled in a production environment while the router
+// silently refused to run. The admin state must report both values.
+$fiveprayer_local_state = \FivePrayer\Core\Admin\LocalTestingMode::get_admin_state();
+
+fiveprayer_assert(
+    wp_get_environment_type() === $fiveprayer_local_state['environmentType'],
+    'the admin state reports the WordPress environment type'
+);
+fiveprayer_assert(
+    ('production' === wp_get_environment_type()) === $fiveprayer_local_state['blockedByEnvironment'],
+    'the admin state flags a switch that the production guard blocks'
+);
+
 $fiveprayer_server_ips = static function () {
     return ['10.0.0.2'];
 };

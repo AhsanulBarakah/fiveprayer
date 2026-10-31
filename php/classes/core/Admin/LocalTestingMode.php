@@ -35,6 +35,7 @@ namespace FivePrayer\Core\Admin;
 defined('ABSPATH') || exit;
 
 use FivePrayer\Core\LocalNetworkRouter;
+use FivePrayer\Core\Security\SecurityHelper;
 
 /**
  * Class LocalTestingMode
@@ -92,6 +93,7 @@ class LocalTestingMode
     public function register(): void
     {
         add_action('wp_ajax_' . self::AJAX_ACTION, [$this, 'handle_ajax_save']);
+        add_action('admin_notices', [$this, 'maybe_show_environment_notice']);
     }
 
     /**
@@ -106,19 +108,63 @@ class LocalTestingMode
     {
         $host          = LocalNetworkRouter::get_request_host();
         $request_local = (null !== $host) && LocalNetworkRouter::is_local_host($host);
+        $enabled       = LocalNetworkRouter::is_enabled();
+        $environment   = wp_get_environment_type();
 
         return [
-            'enabled'         => LocalNetworkRouter::is_enabled(),
-            'active'          => LocalNetworkRouter::is_active(),
-            'host'            => null !== $host ? $host : '',
-            'requestIsLocal'  => $request_local,
-            'savedHosts'      => implode(', ', LocalNetworkRouter::get_saved_hosts()),
-            'serverAddresses' => implode(', ', LocalNetworkRouter::get_server_addresses()),
-            'nonce'           => wp_create_nonce(self::NONCE_ACTION),
-            'ajaxAction'      => self::AJAX_ACTION,
-            'optionName'      => self::OPTION_NAME,
-            'settingsHash'    => self::SETTINGS_HASH,
+            'enabled'              => $enabled,
+            'active'               => LocalNetworkRouter::is_active(),
+            // The router refuses to run in a production environment, which is
+            // WordPress's default when WP_ENVIRONMENT_TYPE is not set. Without
+            // this flag the switch would look enabled while doing nothing.
+            'environmentType'      => $environment,
+            'blockedByEnvironment' => $enabled && 'production' === $environment,
+            'host'                 => null !== $host ? $host : '',
+            'requestIsLocal'       => $request_local,
+            'savedHosts'           => implode(', ', LocalNetworkRouter::get_saved_hosts()),
+            'serverAddresses'      => implode(', ', LocalNetworkRouter::get_server_addresses()),
+            'nonce'                => wp_create_nonce(self::NONCE_ACTION),
+            'ajaxAction'           => self::AJAX_ACTION,
+            'optionName'           => self::OPTION_NAME,
+            'settingsHash'         => self::SETTINGS_HASH,
         ];
+    }
+
+    /**
+     * Warn that the switch cannot do anything in a production environment.
+     *
+     * WordPress reports `production` unless WP_ENVIRONMENT_TYPE is set, which
+     * is the default on MAMP, Docker and Raspberry Pi installs. The router
+     * keeps refusing to run there, so without this notice the switch would
+     * look enabled while silently doing nothing.
+     *
+     * @return void
+     */
+    public function maybe_show_environment_notice(): void
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Same page allowlist as the reset notice: only the FivePrayer screens.
+        $page = sanitize_key(SecurityHelper::get_sanitized_get_input('page'));
+        if (!in_array($page, ['fiveprayer', 'fiveprayer-settings', 'fiveprayer-api-settings'], true)) {
+            return;
+        }
+
+        $state = self::get_admin_state();
+        if (empty($state['blockedByEnvironment'])) {
+            return;
+        }
+        ?>
+        <div class="notice notice-warning">
+            <p>
+                <strong><?php esc_html_e('FivePrayer:', 'fiveprayer'); ?></strong>
+                <?php esc_html_e('Share on Local Network is switched on, but WordPress reports this site as a production environment, so the setting does nothing. Add the following line to wp-config.php and reload this page:', 'fiveprayer'); ?>
+            </p>
+            <p><code><?php echo esc_html("define( 'WP_ENVIRONMENT_TYPE', 'local' );"); ?></code></p>
+        </div>
+        <?php
     }
 
     /**
