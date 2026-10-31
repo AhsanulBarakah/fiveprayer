@@ -3,7 +3,7 @@ Contributors: Jamaaldev,AhsanulBarakah
 Tags: prayer, Muslim, salat, quran, islamic
 Donate link: https://www.buymeacoffee.com/jamaaldev
 Requires at least: 6.7
-Tested up to: 7.2
+Tested up to: 7.1
 Stable tag: 3.0.0
 Requires PHP: 7.4
 License: GPLv3 or later
@@ -14,7 +14,7 @@ Five Prayer displays accurate Muslim prayer times and full-year timetables insid
 == Description ==
 **Five Prayer** shows prayer times and a full-year timetable on any WordPress site, with any theme and any page builder.
 
-Version **3.0.0** is compatible with **WordPress 7.2**.
+Version **3.0.0** is compatible with **WordPress 7.1**.
 
 **Download:** [latest release](https://github.com/AhsanulBarakah/fiveprayer/releases/latest) — install `fiveprayer-x.y.z.zip` from the Releases page.
 
@@ -76,29 +76,16 @@ The preview downloads the asset straight from the Releases page, so it always ru
 * Caching plugin compatibility
 
 == Shortcodes ==
-* `[Fp_TimeTable_Monthly]`
-* `[Fp_Vertical_Daily_Prayer]`
-* `[Fp_Single_Next_Prayer_Remaining]`
-* `[Fp_Extra_Prayer_1]` … `[Fp_Extra_Prayer_6]`
-* `[Fp_Printer_Button]`
-* `[Fp_Printer_Button_URL]`
-* `[Fp_Single_CurrentDate]`
-* `[Fp_Single_Hijra_Date]`
-* `[Fp_Single_CurrentTime]`
-* Per-prayer `_Name`, `_Begins_time` and `_Iqamah_time`
-* `[Fp_Single_Asr_2_Begins_time]` — the second Asr (2 Mithl / Hanafi)
-
 The complete shortcode list is in **Docs**; see **changelog.txt** for what each one does.
 
-== Deprecated ==
-16 deprecated shortcodes still render:
-
-* `[Fp_Single_Fajr_Begins]`, `[Fp_Single_Dhuhr_Begins]`, `[Fp_Single_Asr_Begins]`, `[Fp_Single_Maghrib_Begins]`, `[Fp_Single_Isha_Begins]`
-* `[Fp_Single_Fajr_Iqamah]`, `[Fp_Single_Dhuhr_Iqamah]`, `[Fp_Single_Asr_Iqamah]`, `[Fp_Single_Maghrib_Iqamah]`, `[Fp_Single_Isha_Iqamah]`
-* `[Fp_Single_Midnight_Begins]`, `[Fp_Single_Sunrise_Begins]`
-* `[Fp_Single_NextPrayerIqamahTime]`, `[Fp_Single_NextPrayerIqamahTitle]`, `[Fp_Single_NextPrayerBeginsTime]`, `[Fp_Single_NextPrayerBeginsTitle]`
-
-Replacements are listed in **changelog.txt**.
+* `[Fp_TimeTable_Monthly]` — the printed timetable
+* `[Fp_Vertical_Daily_Prayer]` — today's prayers, stacked
+* `[Fp_Single_Next_Prayer_Remaining]` — countdown to the next prayer
+* `[Fp_Extra_Prayer_1]` … `[Fp_Extra_Prayer_6]` — the optional extra prayers
+* `[Fp_Printer_Button]` and `[Fp_Printer_Button_URL]`
+* `[Fp_Single_CurrentDate]`, `[Fp_Single_CurrentTime]` and `[Fp_Single_Hijra_Date]`
+* `[Fp_Single_Asr_2_Begins_time]` — the second Asr (2 Mithl / Hanafi)
+* Per-prayer `_Name`, `_Begins_time` and `_Iqamah_time`
 
 == Installation ==
 = Automatic Installation =
@@ -111,36 +98,17 @@ Replacements are listed in **changelog.txt**.
 2. Activate **Five Prayer** from the **Plugins** menu.
 
 == After Activation ==
-These five steps turn a fresh install into a working timetable. The screenshots are FivePrayer 3.0.0 on WordPress 7.1.
+Five steps turn a fresh install into a working timetable. Each one is shown in **Screenshots** below.
 
-= 1. Set the timezone =
-**Settings > General > Timezone**, choose your city and click **Save Changes**. Prayer times are local clock times, so this has to be right before anything is generated.
-
-![Timezone set under Settings > General](screenshots/setup-01-timezone.png)
-
-= 2. Add your location =
-**FivePrayer > Customizing > Location**. Fill in Country, City, Latitude and Longitude, then click **Add Location**. Saved locations are what the "Location, City" field on the next screen lists.
-
-![Adding a location](screenshots/setup-02-location.png)
-
-= 3. Fill in Prayer Settings =
-**FivePrayer > Prayer Settings**. Choose the **Month** you want to print, the saved **Location, City**, then **Higher Latitude Adjustment**, **Calculation Method**, **Asr Calculation** and **Midnight Calculation Mode**. The minute fields (Tune Prayer, Iqamah Delay) are optional; leave them at 0 if you want the calculated times.
-
-![Prayer Settings filled in](screenshots/setup-03-prayer-settings.png)
-
-= 4. Generate the calendar =
-Click **Generate Calendar** in the Tune Prayer card. It saves every setting above and builds the timetable for the whole year, so the table appears underneath in the same screen.
-
-![Generate Calendar](screenshots/setup-04-generate.png)
-
-= 5. Check the timetable =
-**Customizing > TimeTable** shows the generated month. Colours, headers and rows are changed there and stored with **Save Colors**.
-
-![The generated timetable](screenshots/setup-05-timetable.png)
+1. **Set the timezone** — Settings > General > Timezone, choose your city and click Save Changes. Prayer times are local clock times, so this comes first.
+2. **Add your location** — FivePrayer > Customizing > Location: Country, City, Latitude and Longitude, then Add Location. Saved locations are what the "Location, City" field lists.
+3. **Fill in Prayer Settings** — FivePrayer > Prayer Settings: the Month you want to print, the saved Location, City, Higher Latitude Adjustment, Calculation Method, Asr Calculation and Midnight Calculation Mode. Tune Prayer and Iqamah Delay are optional.
+4. **Generate the calendar** — click Generate Calendar in the Tune Prayer card. It saves every setting and builds the whole year, so the table appears underneath.
+5. **Check the timetable** — Customizing > TimeTable shows the generated month; colours, headers and rows are stored with Save Colors.
 
 == Upgrade Notice ==
 = 3.0.0 =
-Compatible with WordPress 7.2. Back up before upgrading from 2.4.x; **changelog.txt** lists every new and changed feature.
+Compatible with WordPress 7.1. Back up before upgrading from 2.4.x; **changelog.txt** lists every new and changed feature.
 
 == Frequently Asked Questions ==
 = Does it work with caching plugins? =
@@ -159,22 +127,36 @@ Yes. See **changelog.txt**.
 Only with explicit administrator opt-in.
 
 == Screenshots ==
-Version 3.0.0 running on WordPress 7.1, captured from the live Playground preview.
+FivePrayer 3.0.0 on WordPress 7.1.4, captured in WordPress Playground, in the order you meet them. One image per line.
 
-| | |
-| --- | --- |
-| **Welcome** — quick start, upgrade notice, docs | **Prayer Settings** — method, location, month, tuning |
-| ![Welcome screen](screenshots/01-welcome.png) | ![Prayer Settings](screenshots/02-prayer-settings.png) |
-| **Customizing > Location** — search or enter coordinates | **Customizing > TimeTable** — colours, headers and rows |
-| ![Custom Location](screenshots/03-location.png) | ![TimeTable customiser](screenshots/04-timetable.png) |
-| **Customizing > Configure Settings > Feature Switches** — turn each feature on or off | **More Settings > Translate > Prayer Names** — rename every label |
-| ![Feature Switches](screenshots/05-feature-switches.png) | ![Edit Prayer Names](screenshots/06-prayer-names.png) |
+= 1. Set the timezone =
+Settings > General, Timezone set to your city.
 
-Set your timezone under **Settings > General** before generating the timetable.
+![Timezone under Settings > General](screenshots/setup-01-timezone.png)
+
+= 2. Add your location =
+Customizing > Location, showing the saved location that the Prayer Settings field lists.
+
+![Adding a location](screenshots/setup-02-location.png)
+
+= 3. Fill in Prayer Settings before generating =
+Month, Location, City, Higher Latitude, Calculation Method, Asr Calculation and Midnight Calculation Mode chosen; tuning fields left at 0.
+
+![Prayer Settings filled in](screenshots/setup-03-prayer-settings.png)
+
+= 4. Generate the calendar =
+Generate Calendar builds the year and the table appears underneath it.
+
+![Generate Calendar](screenshots/setup-04-generate.png)
+
+= 5. Check the generated timetable =
+Customizing > TimeTable with the generated month.
+
+![The generated timetable](screenshots/setup-05-timetable.png)
 
 == Changelog ==
 = 3.0.0 =
-Compatible with WordPress 7.2. See **changelog.txt** for the complete version history, or read it online at https://fiveprayer.com/changelog.
+Compatible with WordPress 7.1. See **changelog.txt** for the complete version history, or read it online at https://fiveprayer.com/changelog.
 
 == Contributors ==
 * [@jamaaldev](https://github.com/jamaaldev) — owner and original author
