@@ -11,27 +11,6 @@ use FivePrayer\Core\Security\SecurityHelper;
  */
 trait AjaxCacheTrait
 {
-    public static function maybe_purge_fragment_cache($option, $old_value, $value): void
-    {
-        $watched = [
-            'hijralocale',
-            'extra_info',
-            'prayer_names',
-            'activeLanguage',
-            'timetable_prayer',
-            'vertical_daily_prayer',
-            'skip_iqamah_midnight',
-            'hide_printer_button',
-            'hide_month_selection',
-            'printer_button_url',
-            'hide_custom_url_button',
-            'extra_prayers',
-        ];
-        if (in_array($option, $watched, true)) {
-            self::purge_fragment_caches();
-        }
-    }
-
     public static function purge_fragment_caches(): void
     {
         global $wpdb;

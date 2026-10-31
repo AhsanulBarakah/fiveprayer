@@ -26,7 +26,9 @@ trait ShortcodeRegistrationTrait
         // Six optional custom-prayer slots: [Fp_Extra_Prayer_1] … [Fp_Extra_Prayer_6].
         new ShortCodeExtraPrayers();
 
-        add_action('updated_option', [self::class, 'maybe_purge_fragment_cache'], 10, 3);
+        // Settings live in fp_prayer_settings_meta, not in wp_options, so the
+        // `updated_option` hook this used to watch never fired. Saving settings
+        // calls PrayerDataCache::invalidateAll(), which fires the action below.
         add_action('fiveprayer_invalidate_all', [self::class, 'purge_fragment_caches']);
 
         // `fiveprayer_dynamic_content` is answered by DynamicContentHandler

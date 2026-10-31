@@ -3415,24 +3415,6 @@ parameters:
 			path: php/classes/core/Shortcodes.php
 
 		-
-			message: '#^Method FivePrayer\\Core\\Shortcodes\:\:maybe_purge_fragment_cache\(\) has parameter \$old_value with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: php/classes/core/Shortcodes.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Shortcodes\:\:maybe_purge_fragment_cache\(\) has parameter \$option with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: php/classes/core/Shortcodes.php
-
-		-
-			message: '#^Method FivePrayer\\Core\\Shortcodes\:\:maybe_purge_fragment_cache\(\) has parameter \$value with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: php/classes/core/Shortcodes.php
-
-		-
 			message: '#^Method FivePrayer\\Core\\Shortcodes\:\:single_prayer_shortcode\(\) has parameter \$atts with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
