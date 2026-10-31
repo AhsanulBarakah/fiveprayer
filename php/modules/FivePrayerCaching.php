@@ -247,10 +247,10 @@ function fiveprayer_purge_external_caches() {
         }
     }
 
-    // Clear WordPress object cache only if an external object cache is active
-    if (wp_using_ext_object_cache() && function_exists('wp_cache_flush')) {
-        wp_cache_flush();
-    }
+    // The object cache is deliberately left alone: wp_cache_flush() throws
+    // away every cached value of the whole site, not just this plugin's, and
+    // this function runs on a schedule. Prayer times are refreshed through
+    // PrayerDataCache::invalidateAll() instead.
 }
 
 /**

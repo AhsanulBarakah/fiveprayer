@@ -92,9 +92,7 @@ function fiveprayer_update_logging_settings($request) {
     // Invalidate cache to ensure consistency
     \FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
 
-    // Also purge external cache plugins to ensure changes are visible immediately
-    fiveprayer_purge_external_caches();
-
+    // No page-cache purge: changing the log level does not change any output.
     return rest_ensure_response([
         'success' => true,
         'message' => 'Logging settings updated successfully',

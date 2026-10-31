@@ -27,8 +27,12 @@ function fiveprayer_hourly_cache_check() {
     // Clear prayer data cache to ensure fresh times are loaded
     \FivePrayer\Core\Helpers\PrayerDataCache::invalidateAll();
 
-    // Purge external caches to ensure changes propagate
-    fiveprayer_purge_external_caches();
+    // Purge page caches only when the site owner opted into caching the
+    // shortcode pages. By default they carry DONOTCACHEPAGE, so there is no
+    // stale page to clear and a purge would only wipe the whole site's caches.
+    if (!apply_filters('fiveprayer_prevent_page_cache', true)) {
+        fiveprayer_purge_external_caches();
+    }
 }
 add_action('fiveprayer_hourly_cache_check', 'fiveprayer_hourly_cache_check');
 
@@ -126,8 +130,11 @@ function fiveprayer_check_next_prayer_change() {
             }
         }
 
-        // Purge external caches to ensure changes propagate to cache plugins
-        fiveprayer_purge_external_caches();
+        // Same rule as the hourly check: only a site that lets shortcode pages
+        // be page-cached needs the external purge.
+        if (!apply_filters('fiveprayer_prevent_page_cache', true)) {
+            fiveprayer_purge_external_caches();
+        }
     } else {
         // Still update the check time to track when we last checked
         update_option('fiveprayer_previous_check_time', time());
