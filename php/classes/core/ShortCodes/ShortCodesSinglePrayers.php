@@ -77,20 +77,27 @@ class ShortCodesSinglePrayers {
     {
         // Only enqueue once
         if (!wp_script_is('fiveprayer-dynamic-loader', 'registered')) {
+            $script_path = plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'php/classes/core/Assets/JS/dynamic-prayer-loader.js';
+            $style_path  = plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'utils/dynamic-loader-styles.css';
+
+            $script_version = file_exists($script_path) ? filemtime($script_path) : (function_exists('fiveprayer_get_asset_version') ? fiveprayer_get_asset_version() : '1.0.0');
+            $style_version  = file_exists($style_path) ? filemtime($style_path) : $script_version;
+
             wp_register_script(
                 'fiveprayer-dynamic-loader',
                 plugins_url('php/classes/core/Assets/JS/dynamic-prayer-loader.js', FIVEPRAYER_PLUGIN_FILE),
                 ['jquery'],
-                filemtime(plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'php/classes/core/Assets/JS/dynamic-prayer-loader.js'),
+                $script_version,
                 true
             );
 
-            // Register the CSS as well
+            // Register the CSS as well. The path is relative to the plugin
+            // root; the old ../../../../../ form pointed outside the plugin.
             wp_register_style(
                 'fiveprayer-dynamic-styles',
-                plugins_url('../../../../../utils/dynamic-loader-styles.css', FIVEPRAYER_PLUGIN_FILE),
+                plugins_url('utils/dynamic-loader-styles.css', FIVEPRAYER_PLUGIN_FILE),
                 [],
-                filemtime(plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'utils/dynamic-loader-styles.css')
+                $style_version
             );
         }
 
@@ -197,7 +204,6 @@ class ShortCodesSinglePrayers {
             add_action('init', [$this->shortcodeManager, 'registerShortcodes']);
             add_action('wp_enqueue_scripts', [$this, 'loadAssets']);
             add_action('wp_enqueue_scripts', [$this, 'addInlineStyles']);
-            add_action('save_post', [$this, 'update_prayer_times'], 10, 1);
             $hooks_registered = true;
         }
     }
@@ -237,28 +243,6 @@ class ShortCodesSinglePrayers {
         $this->styleManager->enqueueStyles();
     }
 
-    public function update_prayer_times($post_id) {
-        // Check if this is an autosave
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-            return;
-        }
-
-        // Check user permissions
-        if (!current_user_can('edit_post', $post_id)) {
-            return;
-        }
-
-        // Update prayer times logic here...
-        
-        // After updating prayer times, bust the cache
-        if (class_exists('FivePrayer\\Core\\Cache\\CacheControl')) {
-            \FivePrayer\Core\Cache\CacheControl::bustCache();
-        }
-        
-        // Also clear any transients that might be storing prayer data
-        $this->clear_prayer_transients();
-    }
-
     private function isBuilderEditing(): bool {
         static $is_builder = null;
         if ($is_builder !== null) {
@@ -293,7 +277,4 @@ class ShortCodesSinglePrayers {
         return $is_builder = false;
     }
 
-    private function clear_prayer_transients() {
-        // Logic to clear transients goes here...
-    }
 }

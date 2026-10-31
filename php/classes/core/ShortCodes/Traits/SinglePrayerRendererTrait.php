@@ -86,11 +86,14 @@ trait SinglePrayerRendererTrait
             if (function_exists('fiveprayer_enqueue_combined_scripts')) {
                 fiveprayer_enqueue_combined_scripts();
             } else {
+                $live_time_path    = plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'php/classes/core/ShortCodes/JS/live-time.js';
+                $live_time_version = file_exists($live_time_path) ? filemtime($live_time_path) : (function_exists('fiveprayer_get_asset_version') ? fiveprayer_get_asset_version() : '1.0.0');
+
                 wp_enqueue_script(
                     'fiveprayer-live-time',
                     plugins_url('php/classes/core/ShortCodes/JS/live-time.js', FIVEPRAYER_PLUGIN_FILE),
                     [],
-                    filemtime(plugin_dir_path(FIVEPRAYER_PLUGIN_FILE) . 'php/classes/core/ShortCodes/JS/live-time.js'),
+                    $live_time_version,
                     true
                 );
             }

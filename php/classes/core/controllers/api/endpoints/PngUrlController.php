@@ -91,10 +91,11 @@ class PngUrlController
 
             // Return the image URL with cache control headers
             $response = new WP_REST_Response($image_url, 200);
-            
-            // Set cache headers (1 day cache)
-            $response->header('Cache-Control', 'public, max-age=86400');
-            $response->header('Access-Control-Allow-Origin', '*');
+
+            // The response is administrator-only and the request may create an
+            // attachment, so a shared cache must not keep it and it must not be
+            // readable cross-origin.
+            $response->header('Cache-Control', 'private, max-age=86400');
             
             return $response;
         } catch (\Exception $e) {

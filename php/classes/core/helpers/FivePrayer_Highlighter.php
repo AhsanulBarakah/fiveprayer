@@ -105,7 +105,7 @@ if (!class_exists(__NAMESPACE__ . '\\FivePrayer_Highlighter')) {
 
                     // Localize script with necessary data for the highlighter functionality
                     wp_localize_script('fiveprayer-combined-js', 'fiveprayerHighlighter', [
-                        'nonce' => wp_create_nonce('fiveprayer_nonce'),
+                        'nonce' => wp_create_nonce('fiveprayer_dynamic_nonce'),
                         'ajaxUrl' => admin_url('admin-ajax.php'),
                         'nextPrayer' => $sanitized_slug,
                         'timestamp' => $cache_buster
@@ -121,7 +121,7 @@ if (!class_exists(__NAMESPACE__ . '\\FivePrayer_Highlighter')) {
 
                     // Localize script with necessary data
                     wp_localize_script('fiveprayer-highlighter', 'fiveprayerHighlighter', [
-                        'nonce' => wp_create_nonce('fiveprayer_nonce'),
+                        'nonce' => wp_create_nonce('fiveprayer_dynamic_nonce'),
                         'ajaxUrl' => admin_url('admin-ajax.php'),
                         'nextPrayer' => $sanitized_slug,
                         'timestamp' => $cache_buster

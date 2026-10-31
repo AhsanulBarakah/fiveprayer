@@ -417,7 +417,10 @@ class PrayerSettingsMetaController extends RestControllerBase
     }
 
     public function get_next_prayer() {
-        check_ajax_referer('fiveprayer_nonce', 'nonce');
+        // The front end only ever localizes the dynamic-content nonce; the old
+        // `fiveprayer_nonce` action was generated solely by the highlighter and
+        // no script sent it, so a caller with the front-end nonce was refused.
+        check_ajax_referer('fiveprayer_dynamic_nonce', 'nonce');
 
         try {
             $highlighter = new \FivePrayer\Core\Helpers\FivePrayer_Highlighter();
