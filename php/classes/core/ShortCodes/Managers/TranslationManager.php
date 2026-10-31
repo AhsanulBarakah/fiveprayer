@@ -53,7 +53,6 @@ class TranslationManager {
 
                 if ($prayer_name['language_code'] === $active_lang_code) {
                     if (strcasecmp($prayerKey, $prayer_name['original_text']) === 0) {
-                        SecurityHelper::log_security_event('Translated prayer name: ' . $prayer_name['translated_text'], 'info');
                         return esc_html($prayer_name['translated_text']);
                     }
                 }
@@ -98,7 +97,6 @@ class TranslationManager {
 
                 if ($item['language_code'] === $active_lang_code) {
                     if (strcasecmp($key, $item['original_text']) === 0) {
-                        SecurityHelper::log_security_event('Translated label: ' . $item['translated_text'], 'info');
                         return esc_html($item['translated_text']);
                     }
                 }
@@ -114,7 +112,6 @@ class TranslationManager {
 
                 if ($item['language_code'] === $active_lang_code) {
                     if (strcasecmp($key, $item['original_text']) === 0) {
-                        SecurityHelper::log_security_event('Translated label: ' . $item['translated_text'], 'info');
                         return esc_html($item['translated_text']);
                     }
                 }
@@ -130,7 +127,6 @@ class TranslationManager {
 
                 if ($prayer['language_code'] === $active_lang_code) {
                     if (strcasecmp($key, $prayer['original_text']) === 0) {
-                        SecurityHelper::log_security_event('Translated prayer name from prayer_names: ' . $prayer['translated_text'], 'info');
                         return esc_html($prayer['translated_text']);
                     }
                 }
