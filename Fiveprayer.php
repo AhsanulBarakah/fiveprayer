@@ -95,6 +95,6 @@ if (class_exists('\iFiiri\SDK\Client')) {
         );
     }
 
-// Register activation and deactivation hooks
-register_activation_hook(__FILE__, 'fiveprayer_plugin_activate');
-register_deactivation_hook(__FILE__, 'fiveprayer_deactivation');
+// Activation and deactivation hooks are registered in php/FivePrayerMain.php,
+// which owns the functions they call. Registering them here as well meant both
+// copies were attached to the same action.
