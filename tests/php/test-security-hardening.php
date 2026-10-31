@@ -803,6 +803,55 @@ if (null === $fiveprayer_methods_before) {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Translation import
+// ---------------------------------------------------------------------------
+
+// Like the settings importer this one answers with a redirect, so the test
+// drives the key list and the sanitizer directly.
+$fiveprayer_translation_importer = new class {
+    use \FivePrayer\Core\Admin\Traits\TranslationImportExportTrait;
+};
+
+$fiveprayer_translation_keys = new ReflectionMethod($fiveprayer_translation_importer, 'getTranslationFileKeys');
+$fiveprayer_translation_keys->setAccessible(true);
+$fiveprayer_sanitize_translation = new ReflectionMethod($fiveprayer_translation_importer, 'sanitizeTranslationValue');
+$fiveprayer_sanitize_translation->setAccessible(true);
+
+$fiveprayer_file_keys = $fiveprayer_translation_keys->invoke($fiveprayer_translation_importer);
+
+fiveprayer_assert(
+    !in_array('printer_button_url', $fiveprayer_file_keys, true),
+    'a translation file cannot name a key the export never writes'
+);
+fiveprayer_assert(
+    !in_array('location_list', $fiveprayer_file_keys, true),
+    'a translation file cannot name a settings key'
+);
+fiveprayer_assert(
+    in_array('prayer_names', $fiveprayer_file_keys, true),
+    'a translation file still carries the keys the export writes'
+);
+
+$fiveprayer_sanitized = $fiveprayer_sanitize_translation->invoke(
+    $fiveprayer_translation_importer,
+    [
+        'translated_text' => '<script>x</script>',
+        'nested'          => ['label' => '<b>bold</b>'],
+        'count'           => 3,
+    ]
+);
+
+fiveprayer_assert(
+    false === strpos((string) $fiveprayer_sanitized['translated_text'], '<'),
+    'a translated string is stored without its tags'
+);
+fiveprayer_assert(
+    false === strpos((string) $fiveprayer_sanitized['nested']['label'], '<'),
+    'a translated string nested in a list is stored without its tags'
+);
+fiveprayer_assert(3 === $fiveprayer_sanitized['count'], 'a number in a translation file stays a number');
+
 echo $fiveprayer_failures > 0
     ? esc_html("\nFAILED: {$fiveprayer_failures} check(s)\n")
     : esc_html("\nPASS: all security regression checks\n");

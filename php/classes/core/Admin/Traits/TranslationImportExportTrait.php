@@ -15,14 +15,23 @@ trait TranslationImportExportTrait
         }
         check_admin_referer('fiveprayer_import_translations');
 
-        if (!isset($_FILES['translations_json']['tmp_name'])) {
-            $this->redirect_with_notice('fiveprayer-settings', 'error', __('No file uploaded.', 'fiveprayer'), 'translations');
+        if (!isset($_FILES['translations_json']['error'], $_FILES['translations_json']['tmp_name']) || $_FILES['translations_json']['error'] !== UPLOAD_ERR_OK) {
+            $this->redirect_with_notice('fiveprayer-settings', 'error', __('No file uploaded or upload failed.', 'fiveprayer'), 'translations');
             return;
         }
 
         $uploaded_file = sanitize_text_field(wp_unslash($_FILES['translations_json']['tmp_name']));
         if (!is_uploaded_file($uploaded_file)) {
             $this->redirect_with_notice('fiveprayer-settings', 'error', __('Invalid upload.', 'fiveprayer'), 'translations');
+            return;
+        }
+
+        // A translation file is a few hundred kilobytes at most; anything near
+        // a megabyte is not one, and reading it into memory is not worth it.
+        $max_import_bytes = 1024 * 1024;
+
+        if (filesize($uploaded_file) > $max_import_bytes) {
+            $this->redirect_with_notice('fiveprayer-settings', 'error', __('The file is too large to be a translation file (1 MB maximum).', 'fiveprayer'), 'translations');
             return;
         }
 
@@ -40,11 +49,18 @@ trait TranslationImportExportTrait
         global $wpdb;
         $table = $wpdb->prefix . 'fp_prayer_settings_meta';
 
+        // Only the keys a translation file carries are read: the file names its
+        // own keys, so importing all of them let a crafted file overwrite an
+        // unrelated setting such as location_list or printer_button_url.
         $skipKeys = ['activeLanguage', 'hijralocale'];
-        foreach ($decoded as $meta_key => &$value) {
-            if (in_array($meta_key, $skipKeys, true)) {
+        foreach ($this->getTranslationFileKeys() as $meta_key) {
+            if (in_array($meta_key, $skipKeys, true) || !isset($decoded[$meta_key])) {
                 continue;
             }
+
+            // Translations are printed on the front end, so no string in the file
+            // is stored as it arrived.
+            $value = $this->sanitizeTranslationValue($decoded[$meta_key]);
             // Cached per meta key: the import walks every key in the file, and
             // each row is dropped again right after it is written below.
             $row_cache_key = 'fiveprayer_meta_row_' . md5($table . '|' . $meta_key);
@@ -186,7 +202,7 @@ trait TranslationImportExportTrait
 
         global $wpdb;
         $table = $wpdb->prefix . 'fp_prayer_settings_meta';
-        $keys = ['prayer_names','gregorian_months','gregorian_numbers','hijra_months','hijra_numbers','activeLanguage','hijralocale','timetable_prayer','vertical_daily_prayer','day_names','extra_info'];
+        $keys = $this->getTranslationFileKeys();
         $data = [];
         foreach ($keys as &$k) {
             $value_cache_key = 'fiveprayer_meta_value_' . md5($table . '|' . $k);
@@ -211,6 +227,50 @@ trait TranslationImportExportTrait
         header('Content-Disposition: attachment; filename=fiveprayer-translations-' . gmdate('Ymd-His') . '.json');
         echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit;
+    }
+
+    /**
+     * The translation keys a translation file carries.
+     *
+     * Export writes these and import accepts nothing else, so the two cannot
+     * drift apart.
+     *
+     * @return string[]
+     */
+    private function getTranslationFileKeys(): array
+    {
+        return [
+            'prayer_names',
+            'gregorian_months',
+            'gregorian_numbers',
+            'hijra_months',
+            'hijra_numbers',
+            'activeLanguage',
+            'hijralocale',
+            'timetable_prayer',
+            'vertical_daily_prayer',
+            'day_names',
+            'extra_info',
+        ];
+    }
+
+    /**
+     * Clean a translation value before it is stored.
+     *
+     * @param mixed $value Value read from the uploaded file.
+     * @return mixed
+     */
+    private function sanitizeTranslationValue($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->sanitizeTranslationValue($item);
+            }
+
+            return $value;
+        }
+
+        return is_string($value) ? sanitize_text_field($value) : $value;
     }
 
     private function load_defaults(): ?array
