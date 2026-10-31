@@ -44,6 +44,7 @@
     "test:php": "php tests/php/test-security-hardening.php && php tests/php/test-css-scoping.php && php tests/php/test-timetable-month.php && php tests/php/test-asr-second.php && php tests/php/test-asr2-translation.php",
     "test:tv": "node tests/js/test-tv-display-fit.mjs",
     "docs:screenshots": "node tools/docs-screenshots.mjs",
+    "readme:screenshots": "node tools/setup-screenshots.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "prepare": "git config core.hooksPath .githooks || true",
     "typecheck": "tsc --noEmit",

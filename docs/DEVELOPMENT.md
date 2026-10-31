@@ -63,7 +63,11 @@ autoloader, activates the plugin and then runs each test file. Locally they run
 against your own WordPress install through `npm run test:php`.
 
 Regenerate the screenshots with `npm run docs:screenshots` after changing the
-Docs UI.
+Docs UI, and `npm run readme:screenshots` after changing the admin screens the
+README walkthrough shows. The second one drives a real WordPress, so start
+Playground first (`npx @wp-playground/cli@latest start --port 9423` in the
+plugin directory) and rerun it whenever the version in the README caption
+moves on — it prints the WordPress it captured from.
 
 ## Cutting a Release
 
