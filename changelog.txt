@@ -7,7 +7,7 @@ installer-facing. Everything technical belongs under the versioned changelog
 below. A version with no entry here falls back to GitHub's generated notes.
 
 = 3.0.0 =
-FivePrayer 3.0.0 is compatible with WordPress 7.2.
+FivePrayer 3.0.0 is compatible with WordPress 7.1.
 
 * Feature Switches — turn each Configure Settings feature on or off.
 * Expanded Configure Settings: Unified Method, Rounding, Day-to-Day Smoothing and Calendar Type.
@@ -37,7 +37,7 @@ Read the full changelog online: https://fiveprayer.com/changelog
 * IMPROVED: The monthly timetable resizes with the column it is placed in — the type, the cell padding and the header wrapping follow the container width instead of running past it, so a narrow page column no longer shows a timetable wider than itself. On very narrow screens the table keeps a readable type size and scrolls sideways inside its container instead of shrinking further.
 
 = 3.0.0 =
-* Compatible with WordPress 7.2 (Requires at least WordPress 6.7).
+* Compatible with WordPress 7.1 (Requires at least WordPress 6.7).
 * NEW: Feature Switches — a dedicated page under Customizing → Configure Settings with a master on/off switch for every Configure Settings feature. Turning a feature off hides its card (or dims it with an "Off" badge — your choice) and, for engine-backed features, disables the actual behaviour at generation. The panel warns when two enabled features do not work well together and never deletes saved values.
 * EXPANDED: Configure Settings — the calculation area now includes:
    * Unified Method — exact custom criteria, seasonal/monthly switching, an exact published chart, and Jamā‘ah → Iqamah import.

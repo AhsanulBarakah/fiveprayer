@@ -81,12 +81,16 @@ jobs:
           echo "--- archive root ---"
           unzip -l "$RUNNER_TEMP"/asset/fiveprayer-*.zip | head -8
 
+      # The core named in README's "Tested up to", not the oldest one the suites
+      # support: the point of this job is that the bundle installs on the
+      # version the readme promises. tests/js/unit/readme-wp-version.test.ts
+      # fails when the two drift apart.
       - name: Install WordPress
         run: |
           set -euo pipefail
           WP_DIR="$RUNNER_TEMP/wp"
           mkdir -p "$WP_DIR"
-          curl -fsSL https://wordpress.org/wordpress-6.7.tar.gz | tar -xz -C "$WP_DIR" --strip-components=1
+          curl -fsSL https://wordpress.org/wordpress-7.1.tar.gz | tar -xz -C "$WP_DIR" --strip-components=1
           cp tests/php/fixtures/wp-config.php "$WP_DIR/wp-config.php"
           cp tests/php/fixtures/install-wordpress.php "$WP_DIR/install-wordpress.php"
           cp tests/php/fixtures/activate-plugin.php "$WP_DIR/activate-plugin.php"
