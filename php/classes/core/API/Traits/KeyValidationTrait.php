@@ -55,10 +55,11 @@ trait KeyValidationTrait
         $api_key = trim($api_key);
 
         if ('' === $api_key) {
-            // An empty credential cannot match a key_hash, but rejecting it
-            // before the query keeps the brute-force counter honest.
+            // An empty credential is not an attempt at a key, so it must not
+            // feed the brute-force counter: another site can make visitors'
+            // browsers send keyless requests, and those would otherwise block
+            // an address shared by many people.
             Logger::warning('Empty API key rejected', 'ApiKeyManager');
-            BruteForceSettings::track_failed_attempt($request_ip);
             return ['valid' => false, 'error' => 'Invalid API key'];
         }
 

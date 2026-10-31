@@ -434,6 +434,53 @@ fiveprayer_assert('' === $fiveprayer_extract_route->invoke($fiveprayer_manager, 
 $fiveprayer_empty_result = $fiveprayer_manager->validate_key('');
 fiveprayer_assert(false === $fiveprayer_empty_result['valid'], 'an empty API key is rejected');
 
+// A missing or empty key is not a failed guess. Counting it let any website
+// lock out a shared IP (mosque Wi-Fi, carrier NAT) by making its visitors'
+// browsers send keyless requests to the wildcard-CORS external API.
+$fiveprayer_keyless_ip           = '198.51.100.44';
+$fiveprayer_previous_remote_addr = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
+
+$_SERVER['REMOTE_ADDR'] = $fiveprayer_keyless_ip;
+
+$fiveprayer_brute_option = get_option(\FivePrayer\Core\API\BruteForceSettings::OPTION_NAME, []);
+update_option(\FivePrayer\Core\API\BruteForceSettings::OPTION_NAME, array_merge(
+    is_array($fiveprayer_brute_option) ? $fiveprayer_brute_option : [],
+    ['enabled' => true]
+));
+\FivePrayer\Core\API\BruteForceSettings::clear_settings_cache();
+
+$fiveprayer_keyless_transient = \FivePrayer\Core\API\BruteForceSettings::get_transient_key($fiveprayer_keyless_ip);
+delete_transient($fiveprayer_keyless_transient);
+
+$fiveprayer_manager->validate_key('');
+fiveprayer_assert(false === get_transient($fiveprayer_keyless_transient), 'an empty API key does not count as a failed attempt');
+
+$fiveprayer_keyless_controller = new \FivePrayer\Core\Controllers\API\EndPoints\ExternalApiController();
+$fiveprayer_keyless_result     = $fiveprayer_keyless_controller->check_api_key(
+    new WP_REST_Request('GET', '/fiveprayer/v1/external/prayer-times/today')
+);
+
+$fiveprayer_keyless_status = $fiveprayer_keyless_result instanceof WP_Error
+    ? (int) ($fiveprayer_keyless_result->get_error_data()['status'] ?? 0)
+    : 0;
+
+fiveprayer_assert(401 === $fiveprayer_keyless_status, 'a request without an API key still answers 401');
+fiveprayer_assert(false === get_transient($fiveprayer_keyless_transient), 'a request without an API key does not count as a failed attempt');
+
+// A wrong key must still count, or the protection would stop working.
+$fiveprayer_manager->validate_key('fiveprayer_this_key_does_not_exist');
+fiveprayer_assert(false !== get_transient($fiveprayer_keyless_transient), 'a wrong API key still counts as a failed attempt');
+
+delete_transient($fiveprayer_keyless_transient);
+update_option(\FivePrayer\Core\API\BruteForceSettings::OPTION_NAME, $fiveprayer_brute_option);
+\FivePrayer\Core\API\BruteForceSettings::clear_settings_cache();
+
+if (null === $fiveprayer_previous_remote_addr) {
+    unset($_SERVER['REMOTE_ADDR']);
+} else {
+    $_SERVER['REMOTE_ADDR'] = $fiveprayer_previous_remote_addr;
+}
+
 // End-to-end lifecycle against the real table.
 global $wpdb;
 

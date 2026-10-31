@@ -72,9 +72,11 @@ trait ApiKeyHandlerTrait
         $api_key = $request->get_header('X-API-Key');
 
         if (!$api_key) {
-            if ($brute_force_enabled) {
-                BruteForceSettings::track_failed_attempt($client_ip);
-            }
+            // A missing key is not a guess. The external API sends
+            // `Access-Control-Allow-Origin: *`, so any website can make its
+            // visitors' browsers send keyless requests (an <img> tag is
+            // enough). Counting those as failures let a third party lock out
+            // a shared address such as a mosque's Wi-Fi or a carrier NAT.
             return new WP_Error(
                 'missing_api_key',
                 'API key is required',
